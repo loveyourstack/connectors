@@ -9,7 +9,7 @@ import (
 // Docs: https://data.ecb.europa.eu/help/api/data
 
 const (
-	baseUrl     string = "https://data-api.ecb.europa.eu"
+	baseUrl     string = "https://data-api.ecb.europa.e"
 	timeoutSecs int    = 20
 )
 

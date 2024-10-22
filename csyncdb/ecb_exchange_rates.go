@@ -12,29 +12,29 @@ import (
 	"github.com/loveyourstack/connectors/stores/ecb/ecbexchangerate"
 )
 
-func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, baseCurr string, freq ecbapi.Frequency, startDate, endDate time.Time) (stmt string, err error) {
+func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, baseCurr string, freq ecbapi.Frequency, startDate, endDate time.Time) error {
 
 	// select map of k = ECB currency code, v = db id
 	currStore := ecbcurrency.Store{Db: db}
-	currMap, stmt, err := currStore.SelectCodeIdMap(ctx)
+	currMap, err := currStore.SelectCodeIdMap(ctx)
 	if err != nil {
-		return stmt, fmt.Errorf("currStore.SelectCodeIdMap failed: %w", err)
+		return fmt.Errorf("currStore.SelectCodeIdMap failed: %w", err)
 	}
 	if len(currMap) == 0 {
-		return "", fmt.Errorf("no currencies found: pls sync currencies first")
+		return fmt.Errorf("no currencies found: pls sync currencies first")
 	}
 
 	// select API items map in date range with day+toCurrFk as key
 	apiItemsMap, err := c.GetExchangeRatesMap(baseCurr, freq, startDate, endDate, currMap)
 	if err != nil {
-		return "", fmt.Errorf("c.GetExchangeRatesMap failed: %w", err)
+		return fmt.Errorf("c.GetExchangeRatesMap failed: %w", err)
 	}
 
 	// select DB items map in date range with day+toCurrFk as key
 	itemStore := ecbexchangerate.Store{Db: db}
-	dbItemsMap, stmt, err := itemStore.SelectMapByNaturalKey(ctx, baseCurr, freq.String(), startDate, endDate)
+	dbItemsMap, err := itemStore.SelectMapByNaturalKey(ctx, baseCurr, freq.String(), startDate, endDate)
 	if err != nil {
-		return stmt, fmt.Errorf("itemStore.SelectMapByNaturalKey failed: %w", err)
+		return fmt.Errorf("itemStore.SelectMapByNaturalKey failed: %w", err)
 	}
 
 	newItems := []ecbexchangerate.Input{}
@@ -70,9 +70,9 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 	// run deletes
 	if len(deletedItems) > 0 {
 		for _, dbItem := range deletedItems {
-			stmt, err = itemStore.Delete(ctx, dbItem.Id)
+			err = itemStore.Delete(ctx, dbItem.Id)
 			if err != nil {
-				return stmt, fmt.Errorf("itemStore.Delete failed on ID: %v: %w", dbItem.Id, err)
+				return fmt.Errorf("itemStore.Delete failed on ID: %v: %w", dbItem.Id, err)
 			}
 		}
 		c.InfoLog.Info("deleted exchange rates", slog.Int("num", len(deletedItems)))
@@ -82,7 +82,7 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 	if len(newItems) > 0 {
 		_, err := itemStore.BulkInsert(ctx, newItems)
 		if err != nil {
-			return "", fmt.Errorf("itemStore.BulkInsert failed: %w", err)
+			return fmt.Errorf("itemStore.BulkInsert failed: %w", err)
 		}
 		c.InfoLog.Info("inserted exchange rates", slog.Int("num", len(newItems)))
 	}
@@ -90,13 +90,13 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 	// run updates
 	if len(updatedItems) > 0 {
 		for dbId, apiInput := range updatedItems {
-			stmt, err = itemStore.Update(ctx, apiInput, dbId)
+			err = itemStore.Update(ctx, apiInput, dbId)
 			if err != nil {
-				return stmt, fmt.Errorf("itemStore.Update failed on ID: %v: %w", dbId, err)
+				return fmt.Errorf("itemStore.Update failed on ID: %v: %w", dbId, err)
 			}
 		}
 		c.InfoLog.Info("updated exchange rates", slog.Int("num", len(updatedItems)))
 	}
 
-	return "", nil
+	return nil
 }

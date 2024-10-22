@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/loveyourstack/connectors/stores/ecb/ecbcurrency"
+	"github.com/loveyourstack/lys/lyserr"
 )
 
 type Currency struct {
@@ -21,7 +22,11 @@ func (c Client) GetApiCurrencies() (currencies []Currency, err error) {
 	// get all data structures
 	resp, err := c.HttpClient.Get(dataStructureUrl)
 	if err != nil {
-		return nil, fmt.Errorf("c.HttpClient.Get failed: %w", err)
+		//return nil, fmt.Errorf("c.HttpClient.Get failed: %w", err)
+		return nil, lyserr.Ext{
+			Err:     fmt.Errorf("c.HttpClient.Get failed: %w", err),
+			Message: err.Error(),
+		}
 	}
 	defer resp.Body.Close()
 

@@ -61,7 +61,7 @@ func (s Store) BulkInsert(ctx context.Context, inputs []Input) (rowsAffected int
 	return lyspg.BulkInsert[Input](ctx, s.Db, schemaName, tableName, inputs)
 }
 
-func (s Store) Delete(ctx context.Context, id int64) (stmt string, err error) {
+func (s Store) Delete(ctx context.Context, id int64) error {
 	return lyspg.DeleteUnique(ctx, s.Db, schemaName, tableName, pkColName, id)
 }
 
@@ -76,17 +76,17 @@ func (s Store) GetName() string {
 	return name
 }
 
-func (s Store) Insert(ctx context.Context, input Input) (newItem Model, stmt string, err error) {
+func (s Store) Insert(ctx context.Context, input Input) (newItem Model, err error) {
 	return lyspg.Insert[Input, Model](ctx, s.Db, schemaName, tableName, viewName, pkColName, meta.DbTags, input)
 }
 
-func (s Store) Select(ctx context.Context, params lyspg.SelectParams) (items []Model, unpagedCount lyspg.TotalCount, stmt string, err error) {
+func (s Store) Select(ctx context.Context, params lyspg.SelectParams) (items []Model, unpagedCount lyspg.TotalCount, err error) {
 	return lyspg.Select[Model](ctx, s.Db, schemaName, tableName, viewName, defaultOrderBy, meta.DbTags, params)
 }
 
-func (s Store) SelectMapByNaturalKey(ctx context.Context, baseCurr, freq string, startDate, endDate time.Time) (itemsMap map[string]Model, stmt string, err error) {
+func (s Store) SelectMapByNaturalKey(ctx context.Context, baseCurr, freq string, startDate, endDate time.Time) (itemsMap map[string]Model, err error) {
 
-	items, _, stmt, err := s.Select(ctx, lyspg.SelectParams{
+	items, _, err := s.Select(ctx, lyspg.SelectParams{
 		Conditions: []lyspg.Condition{
 			{Field: "from_currency", Operator: lyspg.OpEquals, Value: baseCurr},
 			{Field: "frequency", Operator: lyspg.OpEquals, Value: freq},
@@ -95,7 +95,7 @@ func (s Store) SelectMapByNaturalKey(ctx context.Context, baseCurr, freq string,
 		},
 	})
 	if err != nil {
-		return nil, stmt, fmt.Errorf("s.Select failed: %w", err)
+		return nil, fmt.Errorf("s.Select failed: %w", err)
 	}
 
 	// convert to map with day+toCurrFk as key
@@ -108,19 +108,19 @@ func (s Store) SelectMapByNaturalKey(ctx context.Context, baseCurr, freq string,
 		itemsMap[dbItem.Day.Format(lystype.DateFormat)+"+"+fmt.Sprintf("%v", dbItem.ToCurrencyFk)] = item
 	}
 
-	return itemsMap, "", nil
+	return itemsMap, nil
 }
 
-func (s Store) SelectById(ctx context.Context, fields []string, id int64) (item Model, stmt string, err error) {
+func (s Store) SelectById(ctx context.Context, fields []string, id int64) (item Model, err error) {
 	return lyspg.SelectUnique[Model](ctx, s.Db, schemaName, viewName, pkColName, fields, meta.DbTags, id)
 }
 
-func (s Store) Update(ctx context.Context, input Input, id int64) (stmt string, err error) {
+func (s Store) Update(ctx context.Context, input Input, id int64) error {
 	input.LastModifiedAt = lystype.Datetime(time.Now())
 	return lyspg.Update[Input](ctx, s.Db, schemaName, tableName, pkColName, input, id)
 }
 
-func (s Store) UpdatePartial(ctx context.Context, assignmentsMap map[string]any, id int64) (stmt string, err error) {
+func (s Store) UpdatePartial(ctx context.Context, assignmentsMap map[string]any, id int64) error {
 	assignmentsMap["last_modified_at"] = lystype.Datetime(time.Now())
 	return lyspg.UpdatePartial(ctx, s.Db, schemaName, tableName, pkColName, inputMeta.DbTags, assignmentsMap, id)
 }
