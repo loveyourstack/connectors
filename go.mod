@@ -5,7 +5,7 @@ go 1.23.3
 require (
 	github.com/go-playground/validator/v10 v10.23.0
 	github.com/jackc/pgx/v5 v5.7.1
-	github.com/loveyourstack/lys v0.1.34
+	github.com/loveyourstack/lys v0.1.45
 )
 
 require (
