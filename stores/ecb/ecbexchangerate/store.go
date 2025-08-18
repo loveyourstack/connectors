@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/loveyourstack/lys/lysmeta"
 	"github.com/loveyourstack/lys/lyspg"
@@ -58,7 +59,7 @@ type Store struct {
 }
 
 func (s Store) BulkInsert(ctx context.Context, inputs []Input) (rowsAffected int64, err error) {
-	return lyspg.BulkInsert[Input](ctx, s.Db, schemaName, tableName, inputs)
+	return lyspg.BulkInsert(ctx, s.Db, schemaName, tableName, inputs)
 }
 
 func (s Store) Delete(ctx context.Context, id int64) error {
@@ -115,9 +116,99 @@ func (s Store) SelectById(ctx context.Context, id int64) (item Model, err error)
 	return lyspg.SelectUnique[Model](ctx, s.Db, schemaName, viewName, pkColName, id)
 }
 
+// SelectLatestDaily returns the latest available daily record for the requested day.
+// if the requested day has no rate, the latest rate before that day is used, up to a maximum of 5 days prior
+func (s Store) SelectLatestDaily(ctx context.Context, fromCurr, toCurr string, day time.Time) (item Model, err error) {
+
+	stmt := fmt.Sprintf("SELECT * from %s.%s WHERE frequency = 'D' AND from_currency = $1 AND to_currency = $2 AND day <= $3 ORDER BY day DESC LIMIT 1", schemaName, viewName)
+
+	items, err := lyspg.SelectT[Model](ctx, s.Db, stmt, fromCurr, toCurr, day.Format(lystype.DateFormat))
+	if err != nil {
+		return Model{}, fmt.Errorf("lyspg.SelectT failed: %w", err)
+	}
+	if len(items) == 0 {
+		return Model{}, pgx.ErrNoRows
+	}
+	if len(items) > 1 {
+		return Model{}, pgx.ErrTooManyRows
+	}
+
+	diff := day.Sub(time.Time(items[0].Day))
+	diffDays := int(diff.Hours() / 24)
+	maxDiffDays := 5
+	if diffDays > maxDiffDays {
+		return Model{}, fmt.Errorf("returned rate is for %v. This is %v days before the requested day, which exceeds the max of %v", items[0].Day.Format(lystype.DateFormat), diffDays, maxDiffDays)
+	}
+
+	return items[0], nil
+}
+
+// SelectLatestDailyRangeMap returns a map of k = day in YYYY-MM-DD, v = rate for all days between start and end, inclusive
+// if a day has no rate, the latest rate before that day is used, up to a maximum of 5 days prior
+func (s Store) SelectLatestDailyRangeMap(ctx context.Context, fromCurr, toCurr string, startDay, endDay time.Time) (rangeMap map[string]float32, err error) {
+
+	maxDiffDays := 5
+
+	stmt := fmt.Sprintf("SELECT * from %s.%s WHERE frequency = 'D' AND from_currency = $1 AND to_currency = $2 AND day >= $3 AND day <= $4 ORDER BY day DESC", schemaName, viewName)
+
+	items, err := lyspg.SelectT[Model](ctx, s.Db, stmt, fromCurr, toCurr, startDay.Add(-time.Duration(maxDiffDays)*24*time.Hour).Format(lystype.DateFormat), endDay.Format(lystype.DateFormat))
+	if err != nil {
+		return nil, fmt.Errorf("lyspg.SelectT failed: %w", err)
+	}
+	if len(items) == 0 {
+		return nil, pgx.ErrNoRows
+	}
+
+	// the latest record may not be more than 5 days before endDay param
+	diff := endDay.Sub(time.Time(items[0].Day))
+	diffDays := int(diff.Hours() / 24)
+	if diffDays > maxDiffDays {
+		return nil, fmt.Errorf("latest rate is for %v. This is %v days before the endDay, which exceeds the max of %v", items[0].Day.Format(lystype.DateFormat), diffDays, maxDiffDays)
+	}
+
+	// the earliest record must be before startDay param
+	if startDay.Before(time.Time(items[len(items)-1].Day)) {
+		return nil, fmt.Errorf("earliest returned rate is for %v. This is after startDay", items[len(items)-1].Day.Format(lystype.DateFormat))
+	}
+
+	// the earliest record may not be more than 5 days before startDay param
+	diff = startDay.Sub(time.Time(items[len(items)-1].Day))
+	diffDays = int(diff.Hours() / 24)
+	if diffDays > maxDiffDays {
+		return nil, fmt.Errorf("earliest returned rate is for %v. This is %v days before startDay, which exceeds the max of %v", items[len(items)-1].Day.Format(lystype.DateFormat), diffDays, maxDiffDays)
+	}
+
+	rangeMap = make(map[string]float32)
+	activeLatest := 0
+
+	// for each day in requested range from end to start
+	for d := endDay; d.Before(startDay) == false; d = d.AddDate(0, 0, -1) {
+
+		// assign the rate for that day if found
+		var rate float32
+		found := false
+		for _, item := range items[activeLatest:] {
+			if d.Format(lystype.DateFormat) == item.Day.Format(lystype.DateFormat) {
+				found = true
+				rate = item.Rate
+				activeLatest++
+				break
+			}
+		}
+		// if not found, assign the latest day available before the current day
+		if !found {
+			rate = items[activeLatest].Rate
+		}
+
+		rangeMap[d.Format(lystype.DateFormat)] = rate
+	}
+
+	return rangeMap, nil
+}
+
 func (s Store) Update(ctx context.Context, input Input, id int64) error {
 	input.LastModifiedAt = lystype.Datetime(time.Now())
-	return lyspg.Update[Input](ctx, s.Db, schemaName, tableName, pkColName, input, id)
+	return lyspg.Update(ctx, s.Db, schemaName, tableName, pkColName, input, id)
 }
 
 func (s Store) UpdatePartial(ctx context.Context, assignmentsMap map[string]any, id int64) error {
@@ -126,5 +217,5 @@ func (s Store) UpdatePartial(ctx context.Context, assignmentsMap map[string]any,
 }
 
 func (s Store) Validate(validate *validator.Validate, input Input) error {
-	return lysmeta.Validate[Input](validate, input)
+	return lysmeta.Validate(validate, input)
 }
