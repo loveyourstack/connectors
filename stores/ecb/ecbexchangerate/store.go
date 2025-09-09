@@ -25,18 +25,18 @@ const (
 )
 
 type Input struct {
-	Day            lystype.Date     `db:"day" json:"day,omitempty" validate:"required"`
+	Day            lystype.Date     `db:"day" json:"day,omitzero" validate:"required"`
 	Frequency      string           `db:"frequency" json:"frequency,omitempty" validate:"required"`
 	FromCurrencyFk int64            `db:"from_currency_fk" json:"from_currency_fk,omitempty" validate:"required"`
-	LastModifiedAt lystype.Datetime `db:"last_modified_at" json:"last_modified_at,omitempty"` // assigned in Update funcs
+	LastModifiedAt lystype.Datetime `db:"last_modified_at" json:"last_modified_at,omitzero"` // assigned in Update funcs
 	Rate           float32          `db:"rate" json:"rate,omitempty" validate:"required"`
 	ToCurrencyFk   int64            `db:"to_currency_fk" json:"to_currency_fk,omitempty" validate:"required"`
 }
 
 type Model struct {
 	Id           int64            `db:"id" json:"id"`
+	EntryAt      lystype.Datetime `db:"entry_at" json:"entry_at,omitzero"`
 	FromCurrency string           `db:"from_currency" json:"from_currency"`
-	EntryAt      lystype.Datetime `db:"entry_at" json:"entry_at,omitempty"`
 	ToCurrency   string           `db:"to_currency" json:"to_currency"`
 	Input
 }
