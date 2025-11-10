@@ -25,19 +25,19 @@ const (
 )
 
 type Input struct {
-	Day            lystype.Date     `db:"day" json:"day,omitzero" validate:"required"`
-	Frequency      string           `db:"frequency" json:"frequency,omitempty" validate:"required"`
-	FromCurrencyFk int64            `db:"from_currency_fk" json:"from_currency_fk,omitempty" validate:"required"`
-	LastModifiedAt lystype.Datetime `db:"last_modified_at" json:"last_modified_at,omitzero"` // assigned in Update funcs
-	Rate           float32          `db:"rate" json:"rate,omitempty" validate:"required"`
-	ToCurrencyFk   int64            `db:"to_currency_fk" json:"to_currency_fk,omitempty" validate:"required"`
+	Day            lystype.Date `db:"day" json:"day,omitzero" validate:"required"`
+	Frequency      string       `db:"frequency" json:"frequency,omitempty" validate:"required,len=1"`
+	FromCurrencyFk int64        `db:"from_currency_fk" json:"from_currency_fk,omitempty" validate:"required"`
+	Rate           float32      `db:"rate" json:"rate,omitempty" validate:"required"`
+	ToCurrencyFk   int64        `db:"to_currency_fk" json:"to_currency_fk,omitempty" validate:"required"`
 }
 
 type Model struct {
 	Id           int64            `db:"id" json:"id"`
-	EntryAt      lystype.Datetime `db:"entry_at" json:"entry_at,omitzero"`
+	CreatedAt    lystype.Datetime `db:"created_at" json:"created_at,omitzero"`
 	FromCurrency string           `db:"from_currency" json:"from_currency"`
 	ToCurrency   string           `db:"to_currency" json:"to_currency"`
+	UpdatedAt    lystype.Datetime `db:"updated_at" json:"updated_at,omitzero"` // assigned by trigger (assumes use of lyspgmon.CheckDDL)
 	Input
 }
 
@@ -207,12 +207,10 @@ func (s Store) SelectLatestDailyRangeMap(ctx context.Context, fromCurr, toCurr s
 }
 
 func (s Store) Update(ctx context.Context, input Input, id int64) error {
-	input.LastModifiedAt = lystype.Datetime(time.Now())
 	return lyspg.Update(ctx, s.Db, schemaName, tableName, pkColName, input, id)
 }
 
 func (s Store) UpdatePartial(ctx context.Context, assignmentsMap map[string]any, id int64) error {
-	assignmentsMap["last_modified_at"] = lystype.Datetime(time.Now())
 	return lyspg.UpdatePartial(ctx, s.Db, schemaName, tableName, pkColName, inputMeta.DbTags, assignmentsMap, id)
 }
 
