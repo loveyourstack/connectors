@@ -45,15 +45,14 @@ CREATE INDEX exchange_rate_freq_day_idx ON ecb.exchange_rate USING btree(frequen
 CLUSTER ecb.exchange_rate USING exchange_rate_freq_day_idx;
 
 
-
 CREATE OR REPLACE VIEW ecb.v_exchange_rate AS
   SELECT
+    xr.id,
     xr.created_at,
     xr.day,
     xr.frequency,
     xr.from_currency_fk,
     from_curr.code AS from_currency,
-    xr.id,
     xr.rate,
     xr.to_currency_fk,
     to_curr.code AS to_currency,

@@ -37,7 +37,7 @@ type Model struct {
 	CreatedAt    lystype.Datetime `db:"created_at" json:"created_at,omitzero"`
 	FromCurrency string           `db:"from_currency" json:"from_currency"`
 	ToCurrency   string           `db:"to_currency" json:"to_currency"`
-	UpdatedAt    lystype.Datetime `db:"updated_at" json:"updated_at,omitzero"` // assigned by trigger (assumes use of lyspgmon.CheckDDL)
+	UpdatedAt    lystype.Datetime `db:"updated_at" json:"updated_at,omitzero"` // assigned by trigger (assumes use of lyspgmon.CheckDb)
 	Input
 }
 
