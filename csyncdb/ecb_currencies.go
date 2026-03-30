@@ -18,8 +18,10 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client) error
 		return fmt.Errorf("c.GetCurrenciesMap failed: %w", err)
 	}
 
-	// select DB items map with Code as key
 	itemStore := ecbcurrency.Store{Db: db}
+	itemType := "Currencies"
+
+	// select DB items map with Code as key
 	dbItemsMap, err := itemStore.SelectMapByNaturalKey(ctx)
 	if err != nil {
 		return fmt.Errorf("itemStore.SelectMapByNaturalKey failed: %w", err)
@@ -34,9 +36,9 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client) error
 			// insert to DB if not found
 			_, err = itemStore.Insert(ctx, apiItem.Input)
 			if err != nil {
-				return fmt.Errorf("itemStore.Insert failed on offerId: %v: %w", key, err)
+				return fmt.Errorf("itemStore.Insert failed on key: %v: %w", key, err)
 			}
-			c.InfoLog.Info("inserted currency", slog.String("code", apiItem.Code))
+			c.InfoLog.Info("inserted", slog.String("type", itemType), slog.Any("code", apiItem.Code))
 			continue
 		}
 
@@ -45,9 +47,9 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client) error
 
 			err = itemStore.Update(ctx, apiItem.Input, dbItem.Id)
 			if err != nil {
-				return fmt.Errorf("itemStore.Update failed on offerId: %v: %w", key, err)
+				return fmt.Errorf("itemStore.Update failed on key: %v: %w", key, err)
 			}
-			c.InfoLog.Info("updated currency", slog.String("code", apiItem.Code))
+			c.InfoLog.Info("updated", slog.String("type", itemType), slog.Any("code", apiItem.Code))
 		}
 	}
 
@@ -60,9 +62,9 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client) error
 			// delete if not found
 			err = itemStore.Delete(ctx, dbItem.Id)
 			if err != nil {
-				return fmt.Errorf("itemStore.Delete failed on offerId: %v: %w", key, err)
+				return fmt.Errorf("itemStore.Delete failed on key: %v: %w", key, err)
 			}
-			c.InfoLog.Info("deleted currency", slog.String("code", dbItem.Code))
+			c.InfoLog.Info("deleted", slog.String("type", itemType), slog.Any("code", dbItem.Code))
 		}
 	}
 

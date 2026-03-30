@@ -30,8 +30,10 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 		return fmt.Errorf("c.GetExchangeRatesMap failed: %w", err)
 	}
 
-	// select DB items map in date range with day+toCurrFk as key
 	itemStore := ecbexchangerate.Store{Db: db}
+	itemType := "Exchange rates"
+
+	// select DB items map in date range with day+toCurrFk as key
 	dbItemsMap, err := itemStore.SelectMapByNaturalKey(ctx, baseCurr, freq.String(), startDate, endDate)
 	if err != nil {
 		return fmt.Errorf("itemStore.SelectMapByNaturalKey failed: %w", err)
@@ -75,7 +77,7 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 				return fmt.Errorf("itemStore.Delete failed on ID: %v: %w", dbItem.Id, err)
 			}
 		}
-		c.InfoLog.Info("deleted exchange rates", slog.Int("num", len(deletedItems)))
+		c.InfoLog.Info("deleted", slog.String("type", itemType), slog.Int("num", len(deletedItems)))
 	}
 
 	// run inserts (bulk)
@@ -84,7 +86,7 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 		if err != nil {
 			return fmt.Errorf("itemStore.BulkInsert failed: %w", err)
 		}
-		c.InfoLog.Info("inserted exchange rates", slog.Int("num", len(newItems)))
+		c.InfoLog.Info("inserted", slog.String("type", itemType), slog.Int("num", len(newItems)))
 	}
 
 	// run updates
@@ -95,7 +97,7 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 				return fmt.Errorf("itemStore.Update failed on ID: %v: %w", dbId, err)
 			}
 		}
-		c.InfoLog.Info("updated exchange rates", slog.Int("num", len(updatedItems)))
+		c.InfoLog.Info("updated", slog.String("type", itemType), slog.Int("num", len(updatedItems)))
 	}
 
 	return nil
