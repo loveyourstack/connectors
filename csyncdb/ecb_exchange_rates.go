@@ -14,6 +14,8 @@ import (
 
 func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, baseCurr string, freq ecbapi.Frequency, startDate, endDate time.Time) error {
 
+	// high volume: uses store bulk methods
+
 	// select map of k = ECB currency code, v = db id
 	currStore := ecbcurrency.Store{Db: db}
 	currMap, err := currStore.SelectCodeIdMap(ctx)
@@ -40,8 +42,9 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 	}
 
 	newItems := []ecbexchangerate.Input{}
-	updatedItems := make(map[int64]ecbexchangerate.Input) // map key is the DB ID
-	deletedItems := []ecbexchangerate.Model{}
+	updatedIds := []int64{}
+	updatedItems := []ecbexchangerate.Input{}
+	deletedIds := []int64{}
 
 	// for each API item
 	for key, apiItem := range apiItemsMap {
@@ -55,7 +58,8 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 
 		// found: compare values and only update if needed
 		if !itemStore.Equal(apiItem, dbItem) {
-			updatedItems[dbItem.Id] = apiItem.Input
+			updatedIds = append(updatedIds, dbItem.Id)
+			updatedItems = append(updatedItems, apiItem.Input)
 		}
 	}
 
@@ -65,22 +69,20 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 		// try to find the equivalent API item
 		_, ok := apiItemsMap[key]
 		if !ok {
-			deletedItems = append(deletedItems, dbItem)
+			deletedIds = append(deletedIds, dbItem.Id)
 		}
 	}
 
 	// run deletes
-	if len(deletedItems) > 0 {
-		for _, dbItem := range deletedItems {
-			err = itemStore.Delete(ctx, dbItem.Id)
-			if err != nil {
-				return fmt.Errorf("itemStore.Delete failed on ID: %v: %w", dbItem.Id, err)
-			}
+	if len(deletedIds) > 0 {
+		err := itemStore.BulkDelete(ctx, deletedIds)
+		if err != nil {
+			return fmt.Errorf("itemStore.BulkDelete failed: %w", err)
 		}
-		c.InfoLog.Info("deleted", slog.String("type", itemType), slog.Int("num", len(deletedItems)))
+		c.InfoLog.Info("deleted", slog.String("type", itemType), slog.Int("num", len(deletedIds)))
 	}
 
-	// run inserts (bulk)
+	// run inserts
 	if len(newItems) > 0 {
 		_, err := itemStore.BulkInsert(ctx, newItems)
 		if err != nil {
@@ -91,11 +93,9 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 
 	// run updates
 	if len(updatedItems) > 0 {
-		for dbId, apiInput := range updatedItems {
-			err = itemStore.Update(ctx, apiInput, dbId)
-			if err != nil {
-				return fmt.Errorf("itemStore.Update failed on ID: %v: %w", dbId, err)
-			}
+		err := itemStore.BulkUpdate(ctx, updatedItems, updatedIds)
+		if err != nil {
+			return fmt.Errorf("itemStore.BulkUpdate failed: %w", err)
 		}
 		c.InfoLog.Info("updated", slog.String("type", itemType), slog.Int("num", len(updatedItems)))
 	}

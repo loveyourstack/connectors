@@ -58,8 +58,16 @@ type Store struct {
 	Db *pgxpool.Pool
 }
 
+func (s Store) BulkDelete(ctx context.Context, ids []int64) error {
+	return lyspg.BulkDelete(ctx, s.Db, schemaName, tableName, pkColName, ids)
+}
+
 func (s Store) BulkInsert(ctx context.Context, inputs []Input) (rowsAffected int64, err error) {
 	return lyspg.BulkInsert(ctx, s.Db, schemaName, tableName, inputs)
+}
+
+func (s Store) BulkUpdate(ctx context.Context, inputs []Input, ids []int64) error {
+	return lyspg.BulkUpdate(ctx, s.Db, schemaName, tableName, pkColName, inputs, ids)
 }
 
 func (s Store) Delete(ctx context.Context, id int64) error {
