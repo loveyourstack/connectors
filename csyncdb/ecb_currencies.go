@@ -13,7 +13,7 @@ import (
 func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client) error {
 
 	// select API items map with Code as key
-	apiItemsMap, err := c.GetCurrenciesMap()
+	apiItemsMap, err := c.GetCurrenciesMap(ctx)
 	if err != nil {
 		return fmt.Errorf("c.GetCurrenciesMap failed: %w", err)
 	}

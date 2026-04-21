@@ -1,12 +1,14 @@
 package ecbapi
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"net/url"
 	"strconv"
 	"time"
 
+	"github.com/loveyourstack/connectors/stores/ecb/ecbapicall"
 	"github.com/loveyourstack/connectors/stores/ecb/ecbexchangerate"
 	"github.com/loveyourstack/lys/lystype"
 )
@@ -19,8 +21,8 @@ type ExchangeRate struct {
 	Rate      float32
 }
 
-// GetAPIExchangeRates returns average daily or monthly exchange rates from baseCurr to all other available currencies
-func (c Client) GetAPIExchangeRates(baseCurr string, freq Frequency, startDate, endDate time.Time) (exRates []ExchangeRate, err error) {
+// GetApiExchangeRates returns average daily or monthly exchange rates from baseCurr to all other available currencies
+func (c Client) GetApiExchangeRates(ctx context.Context, baseCurr string, freq Frequency, startDate, endDate time.Time) (exRates []ExchangeRate, err error) {
 
 	// validate dates
 	if startDate.After(time.Now()) {
@@ -54,21 +56,52 @@ func (c Client) GetAPIExchangeRates(baseCurr string, freq Frequency, startDate, 
 	params.Add("endPeriod", endDate.Format(dateFormat))
 	exrUrl := exrBaseUrl + path + "?" + params.Encode()
 
+	start := time.Now()
+
+	// prepare call log input
+	callInput := ecbapicall.Input{
+		Attempt:    1,
+		DurationMs: 0, // set in defer
+		Endpoint:   exrUrl,
+		Method:     "GET",
+		Page:       1,
+		Result:     "", // set below depending on success or error
+		StatusCode: 0,  // set below after response is received
+	}
+
+	// defer call log to capture duration and result
+	defer func() {
+		callInput.DurationMs = time.Since(start).Milliseconds()
+
+		_, err := c.CallStore.Insert(ctx, callInput)
+		if err != nil {
+			c.ErrorLog.Error("c.CallStore.Insert failed", "error", err, "callInput", callInput)
+		}
+	}()
+
 	// get rates
 	resp, err := c.HttpClient.Get(exrUrl)
 	if err != nil {
+		if resp != nil {
+			callInput.StatusCode = resp.StatusCode
+		}
+		callInput.Result = "error making HTTP request: " + err.Error()
 		return nil, fmt.Errorf("c.HttpClient.Get failed: %w", err)
 	}
 	defer resp.Body.Close()
+	callInput.StatusCode = resp.StatusCode
 
 	// read csv content
 	csvContent, err := csv.NewReader(resp.Body).ReadAll()
 	if err != nil {
+		callInput.Result = "error reading CSV content: " + err.Error()
 		return nil, fmt.Errorf("csv.NewReader().ReadAll failed: %w", err)
 	}
 
 	if len(csvContent) < 2 {
-		return nil, fmt.Errorf("no rates found for these params")
+		errMsg := "no rates found for these params"
+		callInput.Result = errMsg
+		return nil, fmt.Errorf("%s", errMsg)
 	}
 
 	/* csvContent looks like this:
@@ -95,6 +128,7 @@ func (c Client) GetAPIExchangeRates(baseCurr string, freq Frequency, startDate, 
 
 		rateFl64, err := strconv.ParseFloat(lineA[7], 32)
 		if err != nil {
+			callInput.Result = "error parsing rate: " + err.Error()
 			return nil, fmt.Errorf("strconv.ParseFloat failed for rate '%s': %w", lineA[7], err)
 		}
 		exRate.Rate = float32(rateFl64)
@@ -102,14 +136,16 @@ func (c Client) GetAPIExchangeRates(baseCurr string, freq Frequency, startDate, 
 		exRates = append(exRates, exRate)
 	}
 
+	callInput.Result = "OK"
+
 	return exRates, nil
 }
 
-func (c Client) GetExchangeRates(baseCurr string, freq Frequency, startDate, endDate time.Time, currMap map[string]int64) (items []ecbexchangerate.Input, err error) {
+func (c Client) GetExchangeRates(ctx context.Context, baseCurr string, freq Frequency, startDate, endDate time.Time, currMap map[string]int64) (items []ecbexchangerate.Input, err error) {
 
-	apiItems, err := c.GetAPIExchangeRates(baseCurr, freq, startDate, endDate)
+	apiItems, err := c.GetApiExchangeRates(ctx, baseCurr, freq, startDate, endDate)
 	if err != nil {
-		return nil, fmt.Errorf("c.GetAPIExchangeRates failed: %w", err)
+		return nil, fmt.Errorf("c.GetApiExchangeRates failed: %w", err)
 	}
 
 	for _, apiItem := range apiItems {
@@ -123,9 +159,9 @@ func (c Client) GetExchangeRates(baseCurr string, freq Frequency, startDate, end
 	return items, nil
 }
 
-func (c Client) GetExchangeRatesMap(baseCurr string, freq Frequency, startDate, endDate time.Time, currMap map[string]int64) (itemsMap map[string]ecbexchangerate.Model, err error) {
+func (c Client) GetExchangeRatesMap(ctx context.Context, baseCurr string, freq Frequency, startDate, endDate time.Time, currMap map[string]int64) (itemsMap map[string]ecbexchangerate.Model, err error) {
 
-	items, err := c.GetExchangeRates(baseCurr, freq, startDate, endDate, currMap)
+	items, err := c.GetExchangeRates(ctx, baseCurr, freq, startDate, endDate, currMap)
 	if err != nil {
 		return nil, fmt.Errorf("c.GetExchangeRates failed: %w", err)
 	}

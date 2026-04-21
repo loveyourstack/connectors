@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	name           string = "Currencies"
+	name           string = "ECB currencies"
 	schemaName     string = "ecb"
 	tableName      string = "currency"
 	viewName       string = "currency"

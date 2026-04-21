@@ -27,7 +27,7 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 	}
 
 	// select API items map in date range with day+toCurrFk as key
-	apiItemsMap, err := c.GetExchangeRatesMap(baseCurr, freq, startDate, endDate, currMap)
+	apiItemsMap, err := c.GetExchangeRatesMap(ctx, baseCurr, freq, startDate, endDate, currMap)
 	if err != nil {
 		return fmt.Errorf("c.GetExchangeRatesMap failed: %w", err)
 	}

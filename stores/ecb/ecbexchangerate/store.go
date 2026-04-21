@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	name           string = "Exchange rates"
+	name           string = "ECB exchange rates"
 	schemaName     string = "ecb"
 	tableName      string = "exchange_rate"
 	viewName       string = "v_exchange_rate"

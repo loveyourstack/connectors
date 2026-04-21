@@ -1,10 +1,13 @@
 package ecbapi
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
+	"time"
 
+	"github.com/loveyourstack/connectors/stores/ecb/ecbapicall"
 	"github.com/loveyourstack/connectors/stores/ecb/ecbcurrency"
 	"github.com/loveyourstack/lys/lyserr"
 )
@@ -15,24 +18,52 @@ type Currency struct {
 }
 
 // GetApiCurrencies returns all available currencies
-func (c Client) GetApiCurrencies() (currencies []Currency, err error) {
+func (c Client) GetApiCurrencies(ctx context.Context) (currencies []Currency, err error) {
 
 	dataStructureUrl := baseUrl + "/service/datastructure/ECB/ECB_EXR1/1.0?references=children"
+
+	start := time.Now()
+
+	// prepare call log input
+	callInput := ecbapicall.Input{
+		Attempt:    1,
+		DurationMs: 0, // set in defer
+		Endpoint:   dataStructureUrl,
+		Method:     "GET",
+		Page:       1,
+		Result:     "", // set below depending on success or error
+		StatusCode: 0,  // set below after response is received
+	}
+
+	// defer call log to capture duration and result
+	defer func() {
+		callInput.DurationMs = time.Since(start).Milliseconds()
+
+		_, err := c.CallStore.Insert(ctx, callInput)
+		if err != nil {
+			c.ErrorLog.Error("c.CallStore.Insert failed", "error", err, "callInput", callInput)
+		}
+	}()
 
 	// get all data structures
 	resp, err := c.HttpClient.Get(dataStructureUrl)
 	if err != nil {
-		//return nil, fmt.Errorf("c.HttpClient.Get failed: %w", err)
+		if resp != nil {
+			callInput.StatusCode = resp.StatusCode
+		}
+		callInput.Result = "error making HTTP request: " + err.Error()
 		return nil, lyserr.Ext{
 			Err:     fmt.Errorf("c.HttpClient.Get failed: %w", err),
 			Message: err.Error(),
 		}
 	}
 	defer resp.Body.Close()
+	callInput.StatusCode = resp.StatusCode
 
 	// read xml body
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
+		callInput.Result = "error reading response body: " + err.Error()
 		return nil, fmt.Errorf("io.ReadAll failed: %w", err)
 	}
 
@@ -40,6 +71,7 @@ func (c Client) GetApiCurrencies() (currencies []Currency, err error) {
 	respS := dataStructureResponse{}
 	err = xml.Unmarshal(respBody, &respS)
 	if err != nil {
+		callInput.Result = "error unmarshalling response body: " + err.Error()
 		return nil, fmt.Errorf("xml.Unmarshal failed: %w", err)
 	}
 
@@ -57,8 +89,12 @@ func (c Client) GetApiCurrencies() (currencies []Currency, err error) {
 		}
 	}
 	if len(currencies) == 0 {
-		return nil, fmt.Errorf("currencies could not be parsed out of datastructure xml response")
+		errStr := "currencies could not be parsed out of datastructure xml response"
+		callInput.Result = errStr
+		return nil, fmt.Errorf("%s", errStr)
 	}
+
+	callInput.Result = "OK"
 
 	return currencies, nil
 }
@@ -366,9 +402,9 @@ type dataStructureResponse struct {
 	} `xml:"Structures"`
 }
 
-func (c Client) GetCurrencies() (items []ecbcurrency.Input, err error) {
+func (c Client) GetCurrencies(ctx context.Context) (items []ecbcurrency.Input, err error) {
 
-	apiItems, err := c.GetApiCurrencies()
+	apiItems, err := c.GetApiCurrencies(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("c.GetApiCurrencies failed: %w", err)
 	}
@@ -380,9 +416,9 @@ func (c Client) GetCurrencies() (items []ecbcurrency.Input, err error) {
 	return items, nil
 }
 
-func (c Client) GetCurrenciesMap() (itemsMap map[string]ecbcurrency.Model, err error) {
+func (c Client) GetCurrenciesMap(ctx context.Context) (itemsMap map[string]ecbcurrency.Model, err error) {
 
-	items, err := c.GetCurrencies()
+	items, err := c.GetCurrencies(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("c.GetCurrencies failed: %w", err)
 	}

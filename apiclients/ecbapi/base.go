@@ -4,6 +4,9 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/loveyourstack/connectors/stores/ecb/ecbapicall"
 )
 
 // Docs: https://data.ecb.europa.eu/help/api/data
@@ -17,9 +20,10 @@ type Client struct {
 	HttpClient *http.Client
 	InfoLog    *slog.Logger
 	ErrorLog   *slog.Logger
+	CallStore  ecbapicall.Store
 }
 
-func NewClient(infoLog, errorLog *slog.Logger) (client Client) {
+func NewClient(db *pgxpool.Pool, infoLog, errorLog *slog.Logger) (client Client) {
 
 	apiShortname := "ecb"
 
@@ -29,5 +33,8 @@ func NewClient(infoLog, errorLog *slog.Logger) (client Client) {
 		},
 		InfoLog:  infoLog.With("api", apiShortname),
 		ErrorLog: errorLog.With("api", apiShortname),
+		CallStore: ecbapicall.Store{
+			Db: db,
+		},
 	}
 }
