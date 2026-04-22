@@ -3,13 +3,13 @@ package ecbapi
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
-	"io"
+	"net/http"
 	"time"
 
 	"github.com/loveyourstack/connectors/stores/ecb/ecbapicall"
 	"github.com/loveyourstack/connectors/stores/ecb/ecbcurrency"
-	"github.com/loveyourstack/lys/lyserr"
 )
 
 type Currency struct {
@@ -22,57 +22,52 @@ func (c Client) GetApiCurrencies(ctx context.Context) (currencies []Currency, er
 
 	dataStructureUrl := baseUrl + "/service/datastructure/ECB/ECB_EXR1/1.0?references=children"
 
-	start := time.Now()
-
 	// prepare call log input
 	callInput := ecbapicall.Input{
-		Attempt:    1,
+		Attempt:    0, // set from doRequest response
 		DurationMs: 0, // set in defer
 		Endpoint:   dataStructureUrl,
-		Method:     "GET",
+		Method:     http.MethodGet,
 		Page:       1,
 		Result:     "", // set below depending on success or error
-		StatusCode: 0,  // set below after response is received
+		StatusCode: 0,  // set from doRequest response
 	}
+
+	start := time.Now()
 
 	// defer call log to capture duration and result
 	defer func() {
 		callInput.DurationMs = time.Since(start).Milliseconds()
 
-		_, err := c.CallStore.Insert(ctx, callInput)
+		_, err := c.CallStore.Insert(context.Background(), callInput) // use background context to ensure call log is inserted even if main context is cancelled
 		if err != nil {
 			c.ErrorLog.Error("c.CallStore.Insert failed", "error", err, "callInput", callInput)
 		}
 	}()
 
-	// get all data structures
-	resp, err := c.HttpClient.Get(dataStructureUrl)
+	// get dataStructure XML containing currencies from API
+	respBody, attempt, statusCode, err := c.doRequest(ctx, http.MethodGet, dataStructureUrl, nil)
+	callInput.Attempt = attempt
+	callInput.StatusCode = statusCode
 	if err != nil {
-		if resp != nil {
-			callInput.StatusCode = resp.StatusCode
-		}
-		callInput.Result = "error making HTTP request: " + err.Error()
-		return nil, lyserr.Ext{
-			Err:     fmt.Errorf("c.HttpClient.Get failed: %w", err),
-			Message: err.Error(),
-		}
-	}
-	defer resp.Body.Close()
-	callInput.StatusCode = resp.StatusCode
 
-	// read xml body
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		callInput.Result = "error reading response body: " + err.Error()
-		return nil, fmt.Errorf("io.ReadAll failed: %w", err)
+		// exit without err on context cancellation
+		if errors.Is(err, context.Canceled) {
+			callInput.Result = "context canceled"
+			return nil, nil
+		}
+
+		callInput.Result = "request error: " + err.Error()
+		return nil, fmt.Errorf("c.doRequest failed: %w", err)
 	}
 
 	// unmarshal body into struct
 	respS := dataStructureResponse{}
 	err = xml.Unmarshal(respBody, &respS)
 	if err != nil {
-		callInput.Result = "error unmarshalling response body: " + err.Error()
-		return nil, fmt.Errorf("xml.Unmarshal failed: %w", err)
+		errMsg := "xml.Unmarshal failed: "
+		callInput.Result = errMsg + err.Error()
+		return nil, fmt.Errorf("%s: %w", errMsg, err)
 	}
 
 	// parse out currencies

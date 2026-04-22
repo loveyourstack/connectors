@@ -1,9 +1,13 @@
 package ecbapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"strconv"
 	"time"
@@ -48,54 +52,58 @@ func (c Client) GetApiExchangeRates(ctx context.Context, baseCurr string, freq F
 
 	// build URL
 	exrBaseUrl := baseUrl + "/service/data/EXR"
-	path := fmt.Sprintf("/%s..%s.SP00.A", freq, baseCurr)
 	params := url.Values{}
 	params.Add("detail", "dataonly")
 	params.Add("format", "csvdata")
 	params.Add("startPeriod", startDate.Format(dateFormat))
 	params.Add("endPeriod", endDate.Format(dateFormat))
-	exrUrl := exrBaseUrl + path + "?" + params.Encode()
+	exrUrl := fmt.Sprintf("%s/%s..%s.SP00.A?%s", exrBaseUrl, freq, baseCurr, params.Encode())
 
 	start := time.Now()
 
 	// prepare call log input
 	callInput := ecbapicall.Input{
-		Attempt:    1,
+		Attempt:    0, // set from doRequest response
 		DurationMs: 0, // set in defer
 		Endpoint:   exrUrl,
-		Method:     "GET",
+		Method:     http.MethodGet,
 		Page:       1,
 		Result:     "", // set below depending on success or error
-		StatusCode: 0,  // set below after response is received
+		StatusCode: 0,  // set from doRequest response
 	}
 
 	// defer call log to capture duration and result
 	defer func() {
 		callInput.DurationMs = time.Since(start).Milliseconds()
 
-		_, err := c.CallStore.Insert(ctx, callInput)
+		_, err := c.CallStore.Insert(context.Background(), callInput) // use background context to ensure call log is inserted even if main context is cancelled
 		if err != nil {
 			c.ErrorLog.Error("c.CallStore.Insert failed", "error", err, "callInput", callInput)
 		}
 	}()
 
-	// get rates
-	resp, err := c.HttpClient.Get(exrUrl)
+	// get rates in CSV format from API
+	respBody, attempt, statusCode, err := c.doRequest(ctx, http.MethodGet, exrUrl, nil)
+	callInput.Attempt = attempt
+	callInput.StatusCode = statusCode
 	if err != nil {
-		if resp != nil {
-			callInput.StatusCode = resp.StatusCode
+
+		// exit without err on context cancellation
+		if errors.Is(err, context.Canceled) {
+			callInput.Result = "context canceled"
+			return nil, nil
 		}
-		callInput.Result = "error making HTTP request: " + err.Error()
-		return nil, fmt.Errorf("c.HttpClient.Get failed: %w", err)
+
+		callInput.Result = "request error: " + err.Error()
+		return nil, fmt.Errorf("c.doRequest failed: %w", err)
 	}
-	defer resp.Body.Close()
-	callInput.StatusCode = resp.StatusCode
 
 	// read csv content
-	csvContent, err := csv.NewReader(resp.Body).ReadAll()
+	csvContent, err := csv.NewReader(io.NopCloser(bytes.NewReader(respBody))).ReadAll()
 	if err != nil {
-		callInput.Result = "error reading CSV content: " + err.Error()
-		return nil, fmt.Errorf("csv.NewReader().ReadAll failed: %w", err)
+		errMsg := "csv.NewReader().ReadAll failed: "
+		callInput.Result = errMsg + err.Error()
+		return nil, fmt.Errorf("%s: %w", errMsg, err)
 	}
 
 	if len(csvContent) < 2 {
@@ -128,8 +136,9 @@ func (c Client) GetApiExchangeRates(ctx context.Context, baseCurr string, freq F
 
 		rateFl64, err := strconv.ParseFloat(lineA[7], 32)
 		if err != nil {
-			callInput.Result = "error parsing rate: " + err.Error()
-			return nil, fmt.Errorf("strconv.ParseFloat failed for rate '%s': %w", lineA[7], err)
+			errMsg := fmt.Sprintf("strconv.ParseFloat failed for rate '%s' on line %d: ", lineA[7], i)
+			callInput.Result = errMsg + err.Error()
+			return nil, fmt.Errorf("%s: %w", errMsg, err)
 		}
 		exRate.Rate = float32(rateFl64)
 
