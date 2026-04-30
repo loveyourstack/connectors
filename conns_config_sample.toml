@@ -1,0 +1,16 @@
+[general]
+appName = "Connectors Test"
+
+[database]
+host   = "localhost"
+port   = "5432"
+database = "conns_test"
+schemaCreationOrder = ["public", "ecb"] # must be updated when schemas are added / removed. Also need to add to schemas.sql
+
+[dbSuperUser]
+userName = "postgres"
+password = ""
+
+[dbOwnerUser]
+userName = "conns_owner" # this PG user owns all database objects
+password = "123"

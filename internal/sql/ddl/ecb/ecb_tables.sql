@@ -1,23 +1,4 @@
 
-/*
-if needed:
-CREATE DOMAIN int_gte0 AS integer NOT NULL CHECK (value >= 0);
-CREATE DOMAIN int_positive AS integer NOT NULL CHECK (value > 0);
-CREATE DOMAIN text_short_mandatory AS varchar(64) NOT NULL CHECK (value != '');
-CREATE DOMAIN tracking_at AS timestamp with time zone NOT NULL DEFAULT now();
-*/
-
-CREATE SCHEMA ecb AUTHORIZATION <owner_user>;
-
-/*
-as needed:
-GRANT USAGE ON SCHEMA ecb TO <cli_user>;
-ALTER DEFAULT PRIVILEGES IN SCHEMA ecb GRANT SELECT, UPDATE, INSERT, DELETE ON TABLES TO <cli_user>;
-ALTER DEFAULT PRIVILEGES IN SCHEMA ecb GRANT USAGE, SELECT ON SEQUENCES TO <cli_user>;
-*/
-
-CREATE TYPE ecb.frequency AS ENUM ('D', 'M');
-
 
 CREATE TABLE ecb.api_call
 (	
@@ -62,20 +43,3 @@ COMMENT ON TABLE ecb.exchange_rate IS 'shortname: xr';
 
 CREATE INDEX exchange_rate_freq_day_idx ON ecb.exchange_rate USING btree(frequency, day);
 CLUSTER ecb.exchange_rate USING exchange_rate_freq_day_idx;
-
-
-CREATE OR REPLACE VIEW ecb.v_exchange_rate AS
-  SELECT
-    xr.id,
-    xr.created_at,
-    xr.day,
-    xr.frequency,
-    xr.from_currency_fk,
-      from_curr.code AS from_currency,
-    xr.rate,
-    xr.to_currency_fk,
-      to_curr.code AS to_currency,
-    xr.updated_at
-  FROM ecb.exchange_rate xr
-  JOIN ecb.currency from_curr ON xr.from_currency_fk = from_curr.id
-  JOIN ecb.currency to_curr ON xr.to_currency_fk = to_curr.id;
