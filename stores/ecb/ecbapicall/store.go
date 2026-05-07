@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/loveyourstack/lys/lysmeta"
 	"github.com/loveyourstack/lys/lyspg"
@@ -50,14 +49,12 @@ func init() {
 }
 
 type Store struct {
-	Db        *pgxpool.Pool
-	Validator *validator.Validate
+	Db *pgxpool.Pool
 }
 
-func New(db *pgxpool.Pool, validator *validator.Validate) Store {
+func New(db *pgxpool.Pool) Store {
 	return Store{
-		Db:        db,
-		Validator: validator,
+		Db: db,
 	}
 }
 
@@ -78,8 +75,4 @@ func (s Store) Select(ctx context.Context, params lyspg.SelectParams) (items []M
 
 func (s Store) SelectById(ctx context.Context, id int64) (item Model, err error) {
 	return lyspg.SelectUnique[Model](ctx, s.Db, schemaName, viewName, pkColName, id)
-}
-
-func (s Store) Validate(input Input) error {
-	return lysmeta.Validate(s.Validator, input)
 }

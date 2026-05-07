@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/loveyourstack/connectors/internal/myapp"
 )
@@ -15,7 +14,6 @@ type Application struct {
 	InfoLog  *slog.Logger
 	ErrorLog *slog.Logger
 	Db       *pgxpool.Pool
-	Validate *validator.Validate
 }
 
 // NewApplication returns an Application with default settings. Not all fields get initialized.
@@ -30,6 +28,5 @@ func NewApplication(conf *myapp.Config) (app *Application) {
 		Config:   conf,
 		InfoLog:  infoLog,
 		ErrorLog: errorLog,
-		Validate: validator.New(validator.WithRequiredStructEnabled()),
 	}
 }

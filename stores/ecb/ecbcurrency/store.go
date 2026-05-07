@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/loveyourstack/lys/lysmeta"
 	"github.com/loveyourstack/lys/lyspg"
@@ -34,7 +33,7 @@ type Model struct {
 }
 
 var (
-	plan, inputPlan lysmeta.Plan
+	plan lysmeta.Plan
 )
 
 func init() {
@@ -43,18 +42,15 @@ func init() {
 	if err != nil {
 		log.Fatalf("lysmeta.Analyze failed for %s.%s: %s", schemaName, tableName, err.Error())
 	}
-	inputPlan, _ = lysmeta.Analyze(Input{})
 }
 
 type Store struct {
-	Db        *pgxpool.Pool
-	Validator *validator.Validate
+	Db *pgxpool.Pool
 }
 
-func New(db *pgxpool.Pool, validator *validator.Validate) Store {
+func New(db *pgxpool.Pool) Store {
 	return Store{
-		Db:        db,
-		Validator: validator,
+		Db: db,
 	}
 }
 
@@ -122,12 +118,4 @@ func (s Store) SelectById(ctx context.Context, id int64) (item Model, err error)
 
 func (s Store) Update(ctx context.Context, input Input, id int64) error {
 	return lyspg.Update(ctx, s.Db, schemaName, tableName, pkColName, input, id)
-}
-
-func (s Store) UpdatePartial(ctx context.Context, assignmentsMap map[string]any, id int64) error {
-	return lyspg.UpdatePartial(ctx, s.Db, schemaName, tableName, pkColName, inputPlan.JsonKeyDbNameMap(), assignmentsMap, id)
-}
-
-func (s Store) Validate(input Input) error {
-	return lysmeta.Validate(s.Validator, input)
 }

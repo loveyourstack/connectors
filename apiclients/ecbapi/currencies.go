@@ -3,7 +3,6 @@ package ecbapi
 import (
 	"context"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -39,9 +38,9 @@ func (c Client) GetApiCurrencies(ctx context.Context) (currencies []Currency, er
 	defer func() {
 		callInput.DurationMs = time.Since(start).Milliseconds()
 
-		_, err := c.CallStore.Insert(context.Background(), callInput) // use background context to ensure call log is inserted even if main context is cancelled
+		_, err := c.callStore.Insert(context.Background(), callInput) // use background context to ensure call log is inserted even if main context is cancelled
 		if err != nil {
-			c.ErrorLog.Error("c.CallStore.Insert failed", "error", err, "callInput", callInput)
+			c.errorLog.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
 		}
 	}()
 
@@ -50,13 +49,6 @@ func (c Client) GetApiCurrencies(ctx context.Context) (currencies []Currency, er
 	callInput.Attempt = attempt
 	callInput.StatusCode = statusCode
 	if err != nil {
-
-		// exit without err on context cancellation
-		if errors.Is(err, context.Canceled) {
-			callInput.Result = "context canceled"
-			return nil, nil
-		}
-
 		callInput.Result = "request error: " + err.Error()
 		return nil, fmt.Errorf("c.doRequest failed: %w", err)
 	}

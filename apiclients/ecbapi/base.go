@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/loveyourstack/connectors/stores/ecb/ecbapicall"
+	"github.com/loveyourstack/lys/lystime"
 )
 
 // Docs: https://data.ecb.europa.eu/help/api/data
@@ -23,25 +23,23 @@ const (
 )
 
 type Client struct {
-	HttpClient *http.Client
-	Validate   *validator.Validate
-	InfoLog    *slog.Logger
-	ErrorLog   *slog.Logger
-	CallStore  ecbapicall.Store
+	callStore  ecbapicall.Store
+	errorLog   *slog.Logger
+	httpClient *http.Client
+	infoLog    *slog.Logger
 }
 
-func NewClient(db *pgxpool.Pool, validate *validator.Validate, infoLog, errorLog *slog.Logger) (client Client) {
+func NewClient(db *pgxpool.Pool, infoLog, errorLog *slog.Logger) (client Client) {
 
 	apiShortname := "ecb"
 
 	return Client{
-		HttpClient: &http.Client{
+		callStore: ecbapicall.New(db),
+		errorLog:  errorLog.With("api", apiShortname),
+		httpClient: &http.Client{
 			Timeout: time.Duration(timeoutSecs) * time.Second,
 		},
-		Validate:  validate,
-		InfoLog:   infoLog.With("api", apiShortname),
-		ErrorLog:  errorLog.With("api", apiShortname),
-		CallStore: ecbapicall.New(db, validate),
+		infoLog: infoLog.With("api", apiShortname),
 	}
 }
 
@@ -66,7 +64,7 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 		}
 
 		// do request
-		resp, err := c.HttpClient.Do(req)
+		resp, err := c.httpClient.Do(req)
 		if err != nil {
 
 			// exit on context cancellation
@@ -76,30 +74,32 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 
 			// retry on context deadline exceeded
 			if errors.Is(err, context.DeadlineExceeded) {
-				c.InfoLog.Info("context deadline exceeded, retrying", "attempt", attempt)
-				time.Sleep(defaultBackoff)
+				c.infoLog.Info("context deadline exceeded, retrying", "attempt", attempt)
+				_ = lystime.Sleep(ctx, defaultBackoff)
 				continue
 			}
 
 			// retry on net timeout
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				c.InfoLog.Info("request timed out, retrying", "attempt", attempt)
-				time.Sleep(defaultBackoff)
+				c.infoLog.Info("request timed out, retrying", "attempt", attempt)
+				_ = lystime.Sleep(ctx, defaultBackoff)
 				continue
 			}
 
 			if resp != nil {
 				statusCode = resp.StatusCode
 			}
-			return nil, attempt, statusCode, fmt.Errorf("c.HttpClient.Do failed: %w", err)
+			return nil, attempt, statusCode, fmt.Errorf("c.httpClient.Do failed: %w", err)
 		}
-		defer resp.Body.Close()
 
 		// read body
 		respBody, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, attempt, resp.StatusCode, fmt.Errorf("io.ReadAll failed: %w", err)
 		}
+
+		// closing body immediately rather in defer due to this code being in a retry loop
+		resp.Body.Close()
 
 		// exit on success
 		if resp.StatusCode == http.StatusOK {
@@ -111,8 +111,8 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 
 		// retry on temporary server errors
 		case http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
-			c.InfoLog.Info("temporary server error, retrying", "statusCode", resp.StatusCode, "attempt", attempt)
-			time.Sleep(defaultBackoff)
+			c.infoLog.Info("temporary server error, retrying", "statusCode", resp.StatusCode, "attempt", attempt)
+			_ = lystime.Sleep(ctx, defaultBackoff)
 			continue
 
 		// add handling for other codes as needed

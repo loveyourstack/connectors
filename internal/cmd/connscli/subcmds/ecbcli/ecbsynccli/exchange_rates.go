@@ -30,7 +30,7 @@ func ExchangeRatesCmd(cliApp *cliapp.App) *cobra.Command {
 			}
 
 			// daily
-			err = csyncdb.EcbExchangeRates(cmd.Context(), cliApp.Db, cliApp.EcbClient, "EUR", ecbapi.Daily, startDate, endDate)
+			err = csyncdb.EcbExchangeRates(cmd.Context(), cliApp.Db, cliApp.EcbClient, "EUR", ecbapi.Daily, startDate, endDate, cliApp.InfoLog)
 			if err != nil {
 				return fmt.Errorf("csyncdb.EcbExchangeRates (Daily) failed: %w", err)
 			}

@@ -12,12 +12,12 @@ import (
 	"github.com/loveyourstack/connectors/stores/ecb/ecbexchangerate"
 )
 
-func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, baseCurr string, freq ecbapi.Frequency, startDate, endDate time.Time) error {
+func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, baseCurr string, freq ecbapi.Frequency, startDate, endDate time.Time, infoLog *slog.Logger) error {
 
 	// high volume: uses store bulk methods
 
 	// select map of k = ECB currency code, v = db id
-	currStore := ecbcurrency.New(db, c.Validate)
+	currStore := ecbcurrency.New(db)
 	currMap, err := currStore.SelectCodeIdMap(ctx)
 	if err != nil {
 		return fmt.Errorf("currStore.SelectCodeIdMap failed: %w", err)
@@ -32,8 +32,8 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 		return fmt.Errorf("c.GetExchangeRatesMap failed: %w", err)
 	}
 
-	itemStore := ecbexchangerate.New(db, c.Validate)
-	itemType := "Exchange rates"
+	itemStore := ecbexchangerate.New(db)
+	itemType := "ECB exchange rates"
 
 	// select DB items map in date range with day+toCurrFk as key
 	dbItemsMap, err := itemStore.SelectMapByNaturalKey(ctx, baseCurr, freq.String(), startDate, endDate)
@@ -79,7 +79,7 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 		if err != nil {
 			return fmt.Errorf("itemStore.BulkDelete failed: %w", err)
 		}
-		c.InfoLog.Info("deleted", slog.String("type", itemType), slog.Int("num", len(deletedIds)))
+		infoLog.Info("deleted", slog.String("type", itemType), slog.Int("num", len(deletedIds)))
 	}
 
 	// run inserts
@@ -88,7 +88,7 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 		if err != nil {
 			return fmt.Errorf("itemStore.BulkInsert failed: %w", err)
 		}
-		c.InfoLog.Info("inserted", slog.String("type", itemType), slog.Int("num", len(newItems)))
+		infoLog.Info("inserted", slog.String("type", itemType), slog.Int("num", len(newItems)))
 	}
 
 	// run updates
@@ -97,7 +97,7 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 		if err != nil {
 			return fmt.Errorf("itemStore.BulkUpdate failed: %w", err)
 		}
-		c.InfoLog.Info("updated", slog.String("type", itemType), slog.Int("num", len(updatedItems)))
+		infoLog.Info("updated", slog.String("type", itemType), slog.Int("num", len(updatedItems)))
 	}
 
 	return nil

@@ -10,7 +10,7 @@ import (
 	"github.com/loveyourstack/connectors/stores/ecb/ecbcurrency"
 )
 
-func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client) error {
+func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, infoLog *slog.Logger) error {
 
 	// select API items map with Code as key
 	apiItemsMap, err := c.GetCurrenciesMap(ctx)
@@ -18,8 +18,8 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client) error
 		return fmt.Errorf("c.GetCurrenciesMap failed: %w", err)
 	}
 
-	itemStore := ecbcurrency.New(db, c.Validate)
-	itemType := "Currencies"
+	itemStore := ecbcurrency.New(db)
+	itemType := "ECB currencies"
 
 	// select DB items map with Code as key
 	dbItemsMap, err := itemStore.SelectMapByNaturalKey(ctx)
@@ -38,7 +38,7 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client) error
 			if err != nil {
 				return fmt.Errorf("itemStore.Insert failed on key: %v: %w", key, err)
 			}
-			c.InfoLog.Info("inserted", slog.String("type", itemType), slog.Any("code", apiItem.Code))
+			infoLog.Info("inserted", slog.String("type", itemType), slog.Any("code", apiItem.Code))
 			continue
 		}
 
@@ -49,7 +49,7 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client) error
 			if err != nil {
 				return fmt.Errorf("itemStore.Update failed on key: %v: %w", key, err)
 			}
-			c.InfoLog.Info("updated", slog.String("type", itemType), slog.Any("code", apiItem.Code))
+			infoLog.Info("updated", slog.String("type", itemType), slog.Any("code", apiItem.Code))
 		}
 	}
 
@@ -64,7 +64,7 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client) error
 			if err != nil {
 				return fmt.Errorf("itemStore.Delete failed on key: %v: %w", key, err)
 			}
-			c.InfoLog.Info("deleted", slog.String("type", itemType), slog.Any("code", dbItem.Code))
+			infoLog.Info("deleted", slog.String("type", itemType), slog.Any("code", dbItem.Code))
 		}
 	}
 

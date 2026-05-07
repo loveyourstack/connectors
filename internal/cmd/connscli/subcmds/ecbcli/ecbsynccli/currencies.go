@@ -17,7 +17,7 @@ func CurrenciesCmd(cliApp *cliapp.App) *cobra.Command {
 
 			defer cliApp.Db.Close()
 
-			err = csyncdb.EcbCurrencies(cmd.Context(), cliApp.Db, cliApp.EcbClient)
+			err = csyncdb.EcbCurrencies(cmd.Context(), cliApp.Db, cliApp.EcbClient, cliApp.InfoLog)
 			if err != nil {
 				return fmt.Errorf("csyncdb.EcbCurrencies failed: %w", err)
 			}
