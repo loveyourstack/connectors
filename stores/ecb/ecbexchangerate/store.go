@@ -54,7 +54,15 @@ func init() {
 }
 
 type Store struct {
-	Db *pgxpool.Pool
+	Db        *pgxpool.Pool
+	Validator *validator.Validate
+}
+
+func New(db *pgxpool.Pool, validator *validator.Validate) Store {
+	return Store{
+		Db:        db,
+		Validator: validator,
+	}
 }
 
 func (s Store) BulkDelete(ctx context.Context, ids []int64) error {
@@ -221,6 +229,6 @@ func (s Store) UpdatePartial(ctx context.Context, assignmentsMap map[string]any,
 	return lyspg.UpdatePartial(ctx, s.Db, schemaName, tableName, pkColName, inputPlan.JsonKeyDbNameMap(), assignmentsMap, id)
 }
 
-func (s Store) Validate(validate *validator.Validate, input Input) error {
-	return lysmeta.Validate(validate, input)
+func (s Store) Validate(input Input) error {
+	return lysmeta.Validate(s.Validator, input)
 }

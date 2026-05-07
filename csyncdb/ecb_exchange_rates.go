@@ -17,7 +17,7 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 	// high volume: uses store bulk methods
 
 	// select map of k = ECB currency code, v = db id
-	currStore := ecbcurrency.Store{Db: db}
+	currStore := ecbcurrency.New(db, c.Validate)
 	currMap, err := currStore.SelectCodeIdMap(ctx)
 	if err != nil {
 		return fmt.Errorf("currStore.SelectCodeIdMap failed: %w", err)
@@ -32,7 +32,7 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 		return fmt.Errorf("c.GetExchangeRatesMap failed: %w", err)
 	}
 
-	itemStore := ecbexchangerate.Store{Db: db}
+	itemStore := ecbexchangerate.New(db, c.Validate)
 	itemType := "Exchange rates"
 
 	// select DB items map in date range with day+toCurrFk as key

@@ -67,7 +67,7 @@ func Execute() {
 	}
 	defer cliApp.Db.Close()
 
-	cliApp.EcbClient = ecbapi.NewClient(cliApp.Db, cliApp.InfoLog, cliApp.ErrorLog)
+	cliApp.EcbClient = ecbapi.NewClient(cliApp.Db, cliApp.Validate, cliApp.InfoLog, cliApp.ErrorLog)
 
 	// note that defer db Close is also needed in subcommands or else context cancelation doesn't propagate to db
 
