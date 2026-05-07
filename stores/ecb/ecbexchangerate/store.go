@@ -26,7 +26,7 @@ type Input struct {
 	Day            lystype.Date `db:"day" json:"day,omitzero" validate:"required"`
 	Frequency      string       `db:"frequency" json:"frequency,omitempty" validate:"required,len=1"`
 	FromCurrencyFk int64        `db:"from_currency_fk" json:"from_currency_fk,omitempty" validate:"required"`
-	Rate           float32      `db:"rate" json:"rate,omitempty" validate:"required"`
+	Rate           float64      `db:"rate" json:"rate,omitempty" validate:"required"`
 	ToCurrencyFk   int64        `db:"to_currency_fk" json:"to_currency_fk,omitempty" validate:"required"`
 }
 
@@ -156,7 +156,7 @@ func (s Store) SelectLatestDaily(ctx context.Context, fromCurr, toCurr string, d
 
 // SelectLatestDailyRangeMap returns a map of k = day in YYYY-MM-DD, v = rate for all days between start and end, inclusive
 // if a day has no rate, the latest rate before that day is used, up to a maximum of 5 days prior
-func (s Store) SelectLatestDailyRangeMap(ctx context.Context, fromCurr, toCurr string, startDay, endDay time.Time) (rangeMap map[string]float32, err error) {
+func (s Store) SelectLatestDailyRangeMap(ctx context.Context, fromCurr, toCurr string, startDay, endDay time.Time) (rangeMap map[string]float64, err error) {
 
 	maxDiffDays := 5
 
@@ -189,14 +189,14 @@ func (s Store) SelectLatestDailyRangeMap(ctx context.Context, fromCurr, toCurr s
 		return nil, fmt.Errorf("earliest returned rate is for %v. This is %v days before startDay, which exceeds the max of %v", items[len(items)-1].Day.Format(lystype.DateFormat), diffDays, maxDiffDays)
 	}
 
-	rangeMap = make(map[string]float32)
+	rangeMap = make(map[string]float64)
 	activeLatest := 0
 
 	// for each day in requested range from end to start
 	for d := endDay; d.Before(startDay) == false; d = d.AddDate(0, 0, -1) {
 
 		// assign the rate for that day if found
-		var rate float32
+		var rate float64
 		found := false
 		for _, item := range items[activeLatest:] {
 			if d.Format(lystype.DateFormat) == item.Day.Format(lystype.DateFormat) {

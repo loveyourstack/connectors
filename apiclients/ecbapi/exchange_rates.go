@@ -21,7 +21,7 @@ type ExchangeRate struct {
 	ToCurr    string // code
 	Freq      Frequency
 	PeriodStr string // daily: YYYY-MM-DD, monthly: YYYY-MM
-	Rate      float32
+	Rate      float64
 }
 
 // GetApiExchangeRates returns average daily or monthly exchange rates from baseCurr to all other available currencies
@@ -113,6 +113,13 @@ func (c Client) GetApiExchangeRates(ctx context.Context, baseCurr string, freq F
 	// for each line
 	for i, lineA := range csvContent {
 
+		// ensure line has expected number of columns
+		if len(lineA) != 8 {
+			errMsg := fmt.Sprintf("unexpected number of columns in csv line %d: expected 8, got %d", i, len(lineA))
+			callInput.Result = errMsg
+			return nil, fmt.Errorf("%s", errMsg)
+		}
+
 		// skip header
 		if i == 0 {
 			continue
@@ -126,13 +133,12 @@ func (c Client) GetApiExchangeRates(ctx context.Context, baseCurr string, freq F
 			PeriodStr: lineA[6],
 		}
 
-		rateFl64, err := strconv.ParseFloat(lineA[7], 32)
+		exRate.Rate, err = strconv.ParseFloat(lineA[7], 64)
 		if err != nil {
 			errMsg := fmt.Sprintf("strconv.ParseFloat failed for rate '%s' on line %d: ", lineA[7], i)
 			callInput.Result = errMsg + err.Error()
 			return nil, fmt.Errorf("%s: %w", errMsg, err)
 		}
-		exRate.Rate = float32(rateFl64)
 
 		exRates = append(exRates, exRate)
 	}
@@ -193,7 +199,7 @@ func apiExchangeRateToItem(apiItem ExchangeRate, currMap map[string]int64) (item
 	case Monthly:
 		periodTime, err := time.Parse("2006-01", apiItem.PeriodStr)
 		if err != nil {
-			return ecbexchangerate.Input{}, fmt.Errorf("time.Parse (Daily) failed for PeriodStr '%s': %w", apiItem.PeriodStr, err)
+			return ecbexchangerate.Input{}, fmt.Errorf("time.Parse (Monthly) failed for PeriodStr '%s': %w", apiItem.PeriodStr, err)
 		}
 		day = lystype.Date(periodTime)
 	default:
