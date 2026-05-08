@@ -10,12 +10,18 @@ import (
 	"github.com/loveyourstack/connectors/stores/ecb/ecbcurrency"
 )
 
+// EcbCurrencies syncs the ECB currencies from the API to the DB, comparing items one by one.
 func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, infoLog *slog.Logger) error {
+
+	// low volume: uses store single-item methods
 
 	// select API items map with Code as key
 	apiItemsMap, err := c.GetCurrenciesMap(ctx)
 	if err != nil {
 		return fmt.Errorf("c.GetCurrenciesMap failed: %w", err)
+	}
+	if len(apiItemsMap) == 0 {
+		return fmt.Errorf("API returned no items, refusing to sync")
 	}
 
 	itemStore := ecbcurrency.Store{Db: db}

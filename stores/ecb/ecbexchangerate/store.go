@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -111,7 +112,7 @@ func (s Store) SelectMapByNaturalKey(ctx context.Context, baseCurr, freq string,
 			Id:    dbItem.Id,
 			Input: dbItem.Input,
 		}
-		itemsMap[dbItem.Day.Format(lystype.DateFormat)+"+"+fmt.Sprintf("%v", dbItem.ToCurrencyFk)] = item
+		itemsMap[dbItem.Day.Format(lystype.DateFormat)+"+"+strconv.FormatInt(dbItem.ToCurrencyFk, 10)] = item
 	}
 
 	return itemsMap, nil
@@ -151,6 +152,10 @@ func (s Store) SelectLatestDaily(ctx context.Context, fromCurr, toCurr string, d
 // SelectLatestDailyRangeMap returns a map of k = day in YYYY-MM-DD, v = rate for all days between start and end, inclusive
 // if a day has no rate, the latest rate before that day is used, up to a maximum of 5 days prior
 func (s Store) SelectLatestDailyRangeMap(ctx context.Context, fromCurr, toCurr string, startDay, endDay time.Time) (rangeMap map[string]float64, err error) {
+
+	if startDay.After(endDay) {
+		return nil, fmt.Errorf("startDay %v is after endDay %v", startDay.Format(lystype.DateFormat), endDay.Format(lystype.DateFormat))
+	}
 
 	maxDiffDays := 5
 

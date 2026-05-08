@@ -12,6 +12,7 @@ import (
 	"github.com/loveyourstack/connectors/stores/ecb/ecbexchangerate"
 )
 
+// EcbExchangeRates syncs the ECB exchange rates from the API to the DB, comparing items in bulk.
 func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, baseCurr string, freq ecbapi.Frequency, startDate, endDate time.Time, infoLog *slog.Logger) error {
 
 	// high volume: uses store bulk methods
@@ -23,13 +24,16 @@ func EcbExchangeRates(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, ba
 		return fmt.Errorf("currStore.SelectCodeIdMap failed: %w", err)
 	}
 	if len(currMap) == 0 {
-		return fmt.Errorf("no currencies found: pls sync currencies first")
+		return fmt.Errorf("currency table is empty: run ECB currencies sync first")
 	}
 
 	// select API items map in date range with day+toCurrFk as key
 	apiItemsMap, err := c.GetExchangeRatesMap(ctx, baseCurr, freq, startDate, endDate, currMap)
 	if err != nil {
 		return fmt.Errorf("c.GetExchangeRatesMap failed: %w", err)
+	}
+	if len(apiItemsMap) == 0 {
+		return fmt.Errorf("API returned no items, refusing to sync")
 	}
 
 	itemStore := ecbexchangerate.Store{Db: db}
