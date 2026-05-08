@@ -55,12 +55,6 @@ type Store struct {
 	Db *pgxpool.Pool
 }
 
-func New(db *pgxpool.Pool) Store {
-	return Store{
-		Db: db,
-	}
-}
-
 func (s Store) BulkDelete(ctx context.Context, ids []int64) error {
 	return lyspg.BulkDelete(ctx, s.Db, schemaName, tableName, pkColName, ids)
 }

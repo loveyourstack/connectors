@@ -34,7 +34,7 @@ func NewClient(db *pgxpool.Pool, infoLog, errorLog *slog.Logger) (client Client)
 	apiShortname := "ecb"
 
 	return Client{
-		callStore: ecbapicall.New(db),
+		callStore: ecbapicall.Store{Db: db},
 		errorLog:  errorLog.With("api", apiShortname),
 		httpClient: &http.Client{
 			Timeout: time.Duration(timeoutSecs) * time.Second,

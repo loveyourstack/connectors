@@ -48,12 +48,6 @@ type Store struct {
 	Db *pgxpool.Pool
 }
 
-func New(db *pgxpool.Pool) Store {
-	return Store{
-		Db: db,
-	}
-}
-
 func (s Store) Delete(ctx context.Context, id int64) error {
 	return lyspg.DeleteUnique(ctx, s.Db, schemaName, tableName, pkColName, id)
 }

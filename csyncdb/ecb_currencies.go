@@ -18,7 +18,7 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, infoL
 		return fmt.Errorf("c.GetCurrenciesMap failed: %w", err)
 	}
 
-	itemStore := ecbcurrency.New(db)
+	itemStore := ecbcurrency.Store{Db: db}
 	itemType := "ECB currencies"
 
 	// select DB items map with Code as key

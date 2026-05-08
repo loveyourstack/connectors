@@ -30,8 +30,8 @@ github.com/jackc/puddle/v2 v2.2.2 h1:PR8nw+E/1w0GLuRFSmiioY6UooMp6KJv0/61nB7icHo
 github.com/jackc/puddle/v2 v2.2.2/go.mod h1:vriiEXHvEE654aYKXXjOvZM39qJ0q+azkZFrfEOc3H4=
 github.com/leodido/go-urn v1.4.0 h1:WT9HwE9SGECu3lg4d/dIA+jxlljEa1/ffXKmRjqdmIQ=
 github.com/leodido/go-urn v1.4.0/go.mod h1:bvxc+MVxLKB4z00jd1z+Dvzr47oO32F/QSNjSBOlFxI=
-github.com/loveyourstack/lys v0.3.38 h1:Z8CcGQOA9Nod4QkkNH4bDcIjVQWSobBF/Grv8sG5fTY=
-github.com/loveyourstack/lys v0.3.38/go.mod h1:XqzlZmVrUKtAF7HrCMsCGuLkrOZyOR1GvPgTj0qV6do=
+github.com/loveyourstack/lys v0.3.39 h1:g30JmIB590FWlWNlxVsfWVUq0Ui6N8dVnL2lzI+JYEk=
+github.com/loveyourstack/lys v0.3.39/go.mod h1:XqzlZmVrUKtAF7HrCMsCGuLkrOZyOR1GvPgTj0qV6do=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
