@@ -1,4 +1,4 @@
-package csyncdb
+package ecbsvc
 
 import (
 	"context"
@@ -6,19 +6,18 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/loveyourstack/connectors/apiclients/ecbapi"
-	"github.com/loveyourstack/connectors/stores/ecb/ecbcurrency"
+	"github.com/loveyourstack/connectors/ecb/stores/ecbcurrency"
 )
 
-// EcbCurrencies syncs the ECB currencies from the API to the DB, comparing items one by one.
-func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, infoLog *slog.Logger) error {
+// SyncCurrencies syncs the ECB currencies from the API to the DB, comparing items one by one.
+func (svc Service) SyncCurrencies(ctx context.Context, db *pgxpool.Pool) error {
 
 	// low volume: uses store single-item methods
 
 	// select API items map with Code as key
-	apiItemsMap, err := c.GetCurrenciesMap(ctx)
+	apiItemsMap, err := svc.Client.GetCurrenciesMap(ctx)
 	if err != nil {
-		return fmt.Errorf("c.GetCurrenciesMap failed: %w", err)
+		return fmt.Errorf("svc.Client.GetCurrenciesMap failed: %w", err)
 	}
 	if len(apiItemsMap) == 0 {
 		return fmt.Errorf("API returned no items, refusing to sync")
@@ -44,7 +43,7 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, infoL
 			if err != nil {
 				return fmt.Errorf("itemStore.Insert failed on key: %v: %w", key, err)
 			}
-			infoLog.Info("inserted", slog.String("type", itemType), slog.Any("code", apiItem.Code))
+			svc.InfoLog.Info("inserted", slog.String("type", itemType), slog.Any("code", apiItem.Code))
 			continue
 		}
 
@@ -55,7 +54,7 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, infoL
 			if err != nil {
 				return fmt.Errorf("itemStore.Update failed on key: %v: %w", key, err)
 			}
-			infoLog.Info("updated", slog.String("type", itemType), slog.Any("code", apiItem.Code))
+			svc.InfoLog.Info("updated", slog.String("type", itemType), slog.Any("code", apiItem.Code))
 		}
 	}
 
@@ -70,7 +69,7 @@ func EcbCurrencies(ctx context.Context, db *pgxpool.Pool, c ecbapi.Client, infoL
 			if err != nil {
 				return fmt.Errorf("itemStore.Delete failed on key: %v: %w", key, err)
 			}
-			infoLog.Info("deleted", slog.String("type", itemType), slog.Any("code", dbItem.Code))
+			svc.InfoLog.Info("deleted", slog.String("type", itemType), slog.Any("code", dbItem.Code))
 		}
 	}
 

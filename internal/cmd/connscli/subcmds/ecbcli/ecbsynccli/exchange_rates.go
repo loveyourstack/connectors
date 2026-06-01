@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/loveyourstack/connectors/apiclients/ecbapi"
-	"github.com/loveyourstack/connectors/csyncdb"
+	"github.com/loveyourstack/connectors/ecb/ecbapi"
 	"github.com/loveyourstack/connectors/internal/cmd/connscli/cliapp"
 	"github.com/spf13/cobra"
 )
@@ -17,6 +16,7 @@ func ExchangeRatesCmd(cliApp *cliapp.App) *cobra.Command {
 		Short: "Sync exchange rates with base currency EUR from ECB API into database. Arguments are from and to date, in format YYYY-MM-DD.",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			ctx := cmd.Context()
 
 			defer cliApp.Db.Close()
 
@@ -30,15 +30,15 @@ func ExchangeRatesCmd(cliApp *cliapp.App) *cobra.Command {
 			}
 
 			// daily
-			err = csyncdb.EcbExchangeRates(cmd.Context(), cliApp.Db, cliApp.EcbClient, "EUR", ecbapi.Daily, startDate, endDate, cliApp.InfoLog)
+			err = cliApp.EcbSvc.SyncExchangeRates(ctx, cliApp.Db, "EUR", ecbapi.Daily, startDate, endDate)
 			if err != nil {
-				return fmt.Errorf("csyncdb.EcbExchangeRates (Daily) failed: %w", err)
+				return fmt.Errorf("ecbsvc.SyncExchangeRates (Daily) failed: %w", err)
 			}
 
 			// monthly
-			/*err = csyncdb.EcbExchangeRates(cmd.Context(), cliApp.Db, cliApp.EcbClient, "EUR", ecbapi.Monthly, startDate, endDate)
+			/*err = cliApp.EcbSvc.SyncExchangeRates(ctx, cliApp.Db, "EUR", ecbapi.Monthly, startDate, endDate)
 			if err != nil {
-				return fmt.Errorf("csyncdb.EcbExchangeRates (Monthly) failed: %w", err)
+				return fmt.Errorf("ecbsvc.SyncExchangeRates (Monthly) failed: %w", err)
 			}*/
 
 			cliApp.InfoLog.Debug("done")

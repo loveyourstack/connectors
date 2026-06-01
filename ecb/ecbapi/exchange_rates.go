@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/loveyourstack/connectors/stores/ecb/ecbapicall"
-	"github.com/loveyourstack/connectors/stores/ecb/ecbexchangerate"
+	"github.com/loveyourstack/connectors/ecb/stores/ecbapicall"
+	"github.com/loveyourstack/connectors/ecb/stores/ecbexchangerate"
 	"github.com/loveyourstack/lys/lystype"
 )
 

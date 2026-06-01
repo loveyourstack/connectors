@@ -8,7 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/loveyourstack/connectors/apiclients/ecbapi"
+	"github.com/loveyourstack/connectors/ecb/ecbapi"
+	"github.com/loveyourstack/connectors/ecb/ecbsvc"
 	appCmd "github.com/loveyourstack/connectors/internal/cmd"
 	"github.com/loveyourstack/connectors/internal/cmd/connscli/cliapp"
 	"github.com/loveyourstack/connectors/internal/cmd/connscli/subcmds/ecbcli"
@@ -67,7 +68,11 @@ func Execute() {
 	}
 	defer cliApp.Db.Close()
 
+	// attach API clients
 	cliApp.EcbClient = ecbapi.NewClient(cliApp.Db, cliApp.InfoLog, cliApp.ErrorLog)
+
+	// attach services
+	cliApp.EcbSvc = ecbsvc.NewService(cliApp.EcbClient, cliApp.InfoLog, cliApp.ErrorLog)
 
 	// note that defer db Close is also needed in subcommands or else context cancelation doesn't propagate to db
 
@@ -75,8 +80,7 @@ func Execute() {
 	addSubCommands()
 
 	if err := rootCmd.Execute(); err != nil {
-		var userErr lyserr.User
-		if errors.As(err, &userErr) {
+		if userErr, ok := errors.AsType[lyserr.User](err); ok {
 			log.Fatal(userErr)
 		}
 		log.Fatal(err.Error())

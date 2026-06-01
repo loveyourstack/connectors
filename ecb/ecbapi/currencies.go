@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/loveyourstack/connectors/stores/ecb/ecbapicall"
-	"github.com/loveyourstack/connectors/stores/ecb/ecbcurrency"
+	"github.com/loveyourstack/connectors/ecb/stores/ecbapicall"
+	"github.com/loveyourstack/connectors/ecb/stores/ecbcurrency"
 )
 
 type Currency struct {

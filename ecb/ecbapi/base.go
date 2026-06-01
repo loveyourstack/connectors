@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/loveyourstack/connectors/stores/ecb/ecbapicall"
+	"github.com/loveyourstack/connectors/ecb/stores/ecbapicall"
 	"github.com/loveyourstack/lys/lystime"
 )
 
