@@ -9,8 +9,3 @@ cli:
 .PHONY: tests
 tests: 
 	go test -race ./...
-
-# (re-)create test database
-.PHONY: testdb
-testdb: cli
-	connscli createTestDb

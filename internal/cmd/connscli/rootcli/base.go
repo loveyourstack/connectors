@@ -13,7 +13,10 @@ import (
 	appCmd "github.com/loveyourstack/connectors/internal/cmd"
 	"github.com/loveyourstack/connectors/internal/cmd/connscli/cliapp"
 	"github.com/loveyourstack/connectors/internal/cmd/connscli/subcmds/ecbcli"
+	"github.com/loveyourstack/connectors/internal/cmd/connscli/subcmds/mmcli"
 	"github.com/loveyourstack/connectors/internal/myapp"
+	"github.com/loveyourstack/connectors/maxmind/mmapi"
+	"github.com/loveyourstack/connectors/maxmind/mmsvc"
 	"github.com/loveyourstack/lys/lyserr"
 	"github.com/loveyourstack/lys/lyspgdb"
 	"github.com/spf13/cobra"
@@ -33,9 +36,8 @@ var rootCmd = &cobra.Command{
 var cliApp *cliapp.App
 
 func addSubCommands() {
-	rootCmd.AddCommand(CreateTestDbCmd(cliApp))
-
 	rootCmd.AddCommand(ecbcli.NewCmd(cliApp))
+	rootCmd.AddCommand(mmcli.NewCmd(cliApp))
 }
 
 func Execute() {
@@ -70,9 +72,11 @@ func Execute() {
 
 	// attach API clients
 	cliApp.EcbClient = ecbapi.NewClient(cliApp.Db, cliApp.InfoLog, cliApp.ErrorLog)
+	cliApp.MaxMindClient = mmapi.NewClient(cliApp.Config.MaxMind, cliApp.Db, cliApp.InfoLog, cliApp.ErrorLog)
 
 	// attach services
 	cliApp.EcbSvc = ecbsvc.NewService(cliApp.EcbClient, cliApp.InfoLog, cliApp.ErrorLog)
+	cliApp.MaxMindSvc = mmsvc.NewService(cliApp.MaxMindClient, cliApp.Config.General.DownloadsPath, cliApp.InfoLog, cliApp.ErrorLog)
 
 	// note that defer db Close is also needed in subcommands or else context cancelation doesn't propagate to db
 
