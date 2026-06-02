@@ -58,12 +58,12 @@ func NewClient(conf Conf, db *pgxpool.Pool, infoLog *slog.Logger, errorLog *slog
 	}
 }
 
-func (c Client) doRequest(ctx context.Context, method, url string, body io.Reader) (respBody []byte, attempt, statusCode int, err error) {
+func (c Client) doRequest(ctx context.Context, method, url string, body io.Reader) (respBody []byte, respHeader http.Header, attempt, statusCode int, err error) {
 
 	// define request
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
-		return nil, 0, 0, fmt.Errorf("http.NewRequestWithContext failed: %w", err)
+		return nil, nil, 0, 0, fmt.Errorf("http.NewRequestWithContext failed: %w", err)
 	}
 
 	// add basic auth
@@ -78,7 +78,7 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 
 		// check max attempts
 		if attempt > maxAttempts {
-			return nil, attempt, 0, fmt.Errorf("max attempts exceeded (%d)", maxAttempts)
+			return nil, nil, attempt, 0, fmt.Errorf("max attempts exceeded (%d)", maxAttempts)
 		}
 
 		// do request
@@ -87,7 +87,7 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 
 			// exit on context cancellation
 			if errors.Is(err, context.Canceled) {
-				return nil, attempt, 499, err // 499: Client closed request
+				return nil, nil, attempt, 499, err // 499: Client closed request
 			}
 
 			// retry on context deadline exceeded
@@ -107,13 +107,13 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 			if resp != nil {
 				statusCode = resp.StatusCode
 			}
-			return nil, attempt, statusCode, fmt.Errorf("c.httpClient.Do failed: %w", err)
+			return nil, nil, attempt, statusCode, fmt.Errorf("c.httpClient.Do failed: %w", err)
 		}
 
 		// read body
 		respBody, err = io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, attempt, resp.StatusCode, fmt.Errorf("io.ReadAll failed: %w", err)
+			return nil, nil, attempt, resp.StatusCode, fmt.Errorf("io.ReadAll failed: %w", err)
 		}
 
 		// closing body immediately rather in defer due to this code being in a retry loop
@@ -121,7 +121,7 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 
 		// exit on success
 		if resp.StatusCode == http.StatusOK {
-			return respBody, attempt, resp.StatusCode, nil
+			return respBody, resp.Header, attempt, resp.StatusCode, nil
 		}
 
 		// error: switch on status code
@@ -136,7 +136,7 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 		// add handling for other codes as needed
 
 		default:
-			return nil, attempt, resp.StatusCode, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+			return nil, nil, attempt, resp.StatusCode, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 		}
 
 	} // next attempt

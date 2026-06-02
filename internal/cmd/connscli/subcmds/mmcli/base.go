@@ -11,6 +11,7 @@ func NewCmd(cliApp *cliapp.App) *cobra.Command {
 		Short: "MaxMind commands",
 	}
 
+	cmd.AddCommand(GetGeo2LiteCityLmCmd(cliApp))
 	cmd.AddCommand(WriteGeo2LiteCityCmd(cliApp))
 
 	return cmd

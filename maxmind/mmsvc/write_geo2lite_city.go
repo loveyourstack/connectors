@@ -10,12 +10,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/loveyourstack/connectors/maxmind/mmapi"
+	"github.com/loveyourstack/connectors/maxmind/stores/mmgeodbmeta"
 	"github.com/loveyourstack/connectors/maxmind/stores/mmlocation"
 	"github.com/loveyourstack/connectors/maxmind/stores/mmnetwork"
+	"github.com/loveyourstack/lys/lystype"
 )
 
 func (svc Service) WriteGeo2LiteCity(ctx context.Context, db *pgxpool.Pool, getNewZip bool) (err error) {
@@ -71,6 +74,17 @@ func (svc Service) WriteGeo2LiteCity(ctx context.Context, db *pgxpool.Pool, getN
 	err = locStore.Analyze(ctx)
 	if err != nil {
 		return fmt.Errorf("locStore.Analyze failed: %w", err)
+	}
+
+	// upsert geo db meta with last write time
+	metaStore := mmgeodbmeta.Store{Db: db}
+	input := mmgeodbmeta.Input{
+		GeoDB:       string(mmapi.GeoLite2City),
+		LastWriteAt: lystype.Datetime(time.Now()),
+	}
+	err = metaStore.Upsert(ctx, input)
+	if err != nil {
+		return fmt.Errorf("metaStore.Upsert failed: %w", err)
 	}
 
 	return nil
