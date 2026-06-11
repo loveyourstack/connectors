@@ -6,6 +6,11 @@ Only available for PostgreSQL.
 
 ## Available connectors
 
+### AWS
+`Requires account`
+
+* EC2 security group rules
+
 ### European Central Bank (ECB)
 `Public`
 

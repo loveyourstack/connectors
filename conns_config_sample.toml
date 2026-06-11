@@ -16,6 +16,11 @@ password = ""
 userName = "conns_owner" # this PG user owns all database objects
 password = "123"
 
+[aws]
+accessKeyId = ""
+region = ""
+secretAccessKey = ""
+
 [maxmind]
 accountId = ""
 licenseKey = ""

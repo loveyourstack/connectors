@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
+	"github.com/loveyourstack/connectors/aws/awsapi"
 	"github.com/loveyourstack/connectors/maxmind/mmapi"
 	"github.com/loveyourstack/lys/lyspgdb"
 )
@@ -21,7 +22,9 @@ type Config struct {
 	Db          lyspgdb.Database `toml:"database"`
 	DbSuperUser lyspgdb.User
 	DbOwnerUser lyspgdb.User
-	MaxMind     mmapi.Conf
+
+	Aws     awsapi.Conf
+	MaxMind mmapi.Conf
 }
 
 func (c *Config) LoadFromFile(configFilePath string) (err error) {

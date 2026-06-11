@@ -8,10 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/loveyourstack/connectors/aws/awsapi"
+	"github.com/loveyourstack/connectors/aws/awssvc"
 	"github.com/loveyourstack/connectors/ecb/ecbapi"
 	"github.com/loveyourstack/connectors/ecb/ecbsvc"
 	appCmd "github.com/loveyourstack/connectors/internal/cmd"
 	"github.com/loveyourstack/connectors/internal/cmd/connscli/cliapp"
+	"github.com/loveyourstack/connectors/internal/cmd/connscli/subcmds/awspcli"
 	"github.com/loveyourstack/connectors/internal/cmd/connscli/subcmds/ecbcli"
 	"github.com/loveyourstack/connectors/internal/cmd/connscli/subcmds/mmcli"
 	"github.com/loveyourstack/connectors/internal/myapp"
@@ -36,6 +39,7 @@ var rootCmd = &cobra.Command{
 var cliApp *cliapp.App
 
 func addSubCommands() {
+	rootCmd.AddCommand(awspcli.NewCmd(cliApp))
 	rootCmd.AddCommand(ecbcli.NewCmd(cliApp))
 	rootCmd.AddCommand(mmcli.NewCmd(cliApp))
 }
@@ -71,10 +75,12 @@ func Execute() {
 	defer cliApp.Db.Close()
 
 	// attach API clients
+	cliApp.AwsClient = awsapi.NewClient(conf.Aws, cliApp.Db, cliApp.InfoLog, cliApp.ErrorLog)
 	cliApp.EcbClient = ecbapi.NewClient(cliApp.Db, cliApp.InfoLog, cliApp.ErrorLog)
 	cliApp.MaxMindClient = mmapi.NewClient(cliApp.Config.MaxMind, cliApp.Db, cliApp.InfoLog, cliApp.ErrorLog)
 
 	// attach services
+	cliApp.AwsSvc = awssvc.NewService(cliApp.Db, cliApp.AwsClient, cliApp.InfoLog, cliApp.ErrorLog)
 	cliApp.EcbSvc = ecbsvc.NewService(cliApp.EcbClient, cliApp.InfoLog, cliApp.ErrorLog)
 	cliApp.MaxMindSvc = mmsvc.NewService(cliApp.MaxMindClient, cliApp.Config.General.DownloadsPath, cliApp.InfoLog, cliApp.ErrorLog)
 
