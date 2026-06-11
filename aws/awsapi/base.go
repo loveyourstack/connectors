@@ -16,8 +16,8 @@ import (
 
 type Conf struct {
 	AccessKeyId     string // IAM user access key ID
-	Region          string
-	SecretAccessKey string
+	Region          string // AWS region, e.g. "us-east-1"
+	SecretAccessKey string // IAM user secret access key
 }
 
 type Client struct {
@@ -30,6 +30,7 @@ type Client struct {
 	infoLog  *slog.Logger
 }
 
+// NewClient creates a new AWS API client.
 func NewClient(conf Conf, db *pgxpool.Pool, infoLog, errorLog *slog.Logger) *Client {
 
 	if conf.AccessKeyId == "" {
@@ -56,6 +57,7 @@ func NewClient(conf Conf, db *pgxpool.Pool, infoLog, errorLog *slog.Logger) *Cli
 	}
 }
 
+// connect return AWS config using the provided credentials and region.
 func (c *Client) connect(ctx context.Context) (cfg aws.Config, err error) {
 
 	staticProvider := awsCreds.NewStaticCredentialsProvider(c.conf.AccessKeyId, c.conf.SecretAccessKey, "")

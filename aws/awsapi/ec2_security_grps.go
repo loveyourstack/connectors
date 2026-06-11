@@ -11,6 +11,7 @@ import (
 	"github.com/loveyourstack/connectors/aws/stores/awsapicall"
 )
 
+// GetApiEc2SecGroups returns all EC2 security groups in the configured AWS account and region.
 func (c *Client) GetApiEc2SecGroups(ctx context.Context) (secGroups []awsTypes.SecurityGroup, err error) {
 
 	// make EC2 client if needed
@@ -67,6 +68,7 @@ func (c *Client) GetApiEc2SecGroups(ctx context.Context) (secGroups []awsTypes.S
 	return secGroups, nil
 }
 
+// getApiEc2SecGroupRules is a helper method that returns EC2 security group rules based on the provided filter.
 func (c *Client) getApiEc2SecGroupRules(ctx context.Context, filter awsTypes.Filter) (secGroupRules []awsTypes.SecurityGroupRule, err error) {
 
 	// make EC2 client if needed
@@ -125,14 +127,17 @@ func (c *Client) getApiEc2SecGroupRules(ctx context.Context, filter awsTypes.Fil
 	return secGroupRules, nil
 }
 
+// GetApiEc2SecGroupRulesByGroup returns EC2 security group rules for the specified security group ID.
 func (c *Client) GetApiEc2SecGroupRulesByGroup(ctx context.Context, secGroupId string) (secGroupRules []awsTypes.SecurityGroupRule, err error) {
 	return c.getApiEc2SecGroupRules(ctx, awsTypes.Filter{Name: new("group-id"), Values: []string{secGroupId}})
 }
 
+// GetApiEc2SecGroupRulesByIds returns EC2 security group rules for the specified security group rule IDs.
 func (c *Client) GetApiEc2SecGroupRulesByIds(ctx context.Context, secGroupRuleIds []string) (secGroupRules []awsTypes.SecurityGroupRule, err error) {
 	return c.getApiEc2SecGroupRules(ctx, awsTypes.Filter{Name: new("security-group-rule-id"), Values: secGroupRuleIds})
 }
 
+// Ec2SecGroupRule is a simplified struct for EC2 security group rules that contains only the fields needed for updating the rule's IP.
 type Ec2SecGroupRule struct {
 	GroupId     *string
 	RuleId      *string
@@ -142,6 +147,8 @@ type Ec2SecGroupRule struct {
 	ToPort      *int32
 }
 
+// SetEc2SecGroupRulesIp updates the IP address for the provided EC2 security group rules to the new IP address.
+// It supports both IPv4 and IPv6 addresses.
 func (c *Client) SetEc2SecGroupRulesIp(ctx context.Context, newIp netip.Addr, rules []Ec2SecGroupRule) (err error) {
 
 	if !newIp.IsValid() {

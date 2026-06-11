@@ -12,6 +12,7 @@ import (
 
 var ErrNoRulesConfigured = errors.New("no security group rules configured for user")
 
+// UpdateUserSecurityGroupRules updates the IP address for the EC2 security group rules associated with the specified user.
 func (svc Service) UpdateUserSecurityGroupRules(ctx context.Context, userShortname string, userIp netip.Addr) (err error) {
 
 	// select AWS security group rule ids attached to this user
