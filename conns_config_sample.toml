@@ -6,7 +6,7 @@ downloadsPath = "/home/<user>/downloads"
 host   = "localhost"
 port   = "5432"
 database = "conns_test"
-schemaCreationOrder = ["public", "system", "ecb", "maxmind"] # must be updated when schemas are added / removed. Also need to add to schemas.sql
+schemaCreationOrder = ["public", "system", "aws", "ecb", "maxmind"] # must be updated when schemas are added / removed
 
 [dbSuperUser]
 userName = "postgres"
