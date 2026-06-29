@@ -24,22 +24,20 @@ const (
 
 type Client struct {
 	callStore  ecbapicall.Store
-	errorLog   *slog.Logger
 	httpClient *http.Client
-	infoLog    *slog.Logger
+	logger     *slog.Logger
 }
 
-func NewClient(db *pgxpool.Pool, infoLog, errorLog *slog.Logger) (client Client) {
+func NewClient(db *pgxpool.Pool, logger *slog.Logger) (client Client) {
 
 	apiShortname := "ecb"
 
 	return Client{
 		callStore: ecbapicall.Store{Db: db},
-		errorLog:  errorLog.With("api", apiShortname),
 		httpClient: &http.Client{
 			Timeout: time.Duration(timeoutSecs) * time.Second,
 		},
-		infoLog: infoLog.With("api", apiShortname),
+		logger: logger.With("api", apiShortname),
 	}
 }
 
@@ -74,14 +72,14 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 
 			// retry on context deadline exceeded
 			if errors.Is(err, context.DeadlineExceeded) {
-				c.infoLog.Info("context deadline exceeded, retrying", "attempt", attempt)
+				c.logger.Info("context deadline exceeded, retrying", "attempt", attempt)
 				_ = lystime.Sleep(ctx, defaultBackoff)
 				continue
 			}
 
 			// retry on net timeout
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				c.infoLog.Info("request timed out, retrying", "attempt", attempt)
+				c.logger.Info("request timed out, retrying", "attempt", attempt)
 				_ = lystime.Sleep(ctx, defaultBackoff)
 				continue
 			}
@@ -111,7 +109,7 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 
 		// retry on temporary server errors
 		case http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
-			c.infoLog.Info("temporary server error, retrying", "statusCode", resp.StatusCode, "attempt", attempt)
+			c.logger.Info("temporary server error, retrying", "statusCode", resp.StatusCode, "attempt", attempt)
 			_ = lystime.Sleep(ctx, defaultBackoff)
 			continue
 

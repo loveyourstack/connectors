@@ -43,7 +43,7 @@ func (svc Service) SyncCurrencies(ctx context.Context, db *pgxpool.Pool) error {
 			if err != nil {
 				return fmt.Errorf("itemStore.Insert failed on key: %v: %w", key, err)
 			}
-			svc.InfoLog.Info("inserted", slog.String("type", itemType), slog.Any("code", apiItem.Code))
+			svc.Logger.Info("inserted", slog.String("type", itemType), slog.Any("code", apiItem.Code))
 			continue
 		}
 
@@ -54,7 +54,7 @@ func (svc Service) SyncCurrencies(ctx context.Context, db *pgxpool.Pool) error {
 			if err != nil {
 				return fmt.Errorf("itemStore.Update failed on key: %v: %w", key, err)
 			}
-			svc.InfoLog.Info("updated", slog.String("type", itemType), slog.Any("code", apiItem.Code))
+			svc.Logger.Info("updated", slog.String("type", itemType), slog.Any("code", apiItem.Code))
 		}
 	}
 
@@ -69,7 +69,7 @@ func (svc Service) SyncCurrencies(ctx context.Context, db *pgxpool.Pool) error {
 			if err != nil {
 				return fmt.Errorf("itemStore.Delete failed on key: %v: %w", key, err)
 			}
-			svc.InfoLog.Info("deleted", slog.String("type", itemType), slog.Any("code", dbItem.Code))
+			svc.Logger.Info("deleted", slog.String("type", itemType), slog.Any("code", dbItem.Code))
 		}
 	}
 

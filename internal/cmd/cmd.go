@@ -6,27 +6,21 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/loveyourstack/connectors/internal/myapp"
+	"github.com/loveyourstack/lys/lyslog"
 )
 
 // Application contains the fields common to all commands
 type Application struct {
-	Config   *myapp.Config
-	InfoLog  *slog.Logger
-	ErrorLog *slog.Logger
-	Db       *pgxpool.Pool
+	Config *myapp.Config
+	Logger *slog.Logger
+	Db     *pgxpool.Pool
 }
 
 // NewApplication returns an Application with default settings. Not all fields get initialized.
 func NewApplication(conf *myapp.Config) (app *Application) {
 
-	// declare and configure logs
-	var infoLog, errorLog *slog.Logger
-	infoLog = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	errorLog = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-
 	return &Application{
-		Config:   conf,
-		InfoLog:  infoLog,
-		ErrorLog: errorLog,
+		Config: conf,
+		Logger: slog.New(lyslog.NewSplitStreamHandler(os.Stdout, os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})),
 	}
 }

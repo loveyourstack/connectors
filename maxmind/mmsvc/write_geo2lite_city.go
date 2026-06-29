@@ -29,7 +29,7 @@ func (svc Service) WriteGeo2LiteCity(ctx context.Context, db *pgxpool.Pool, getN
 	// get/update GeoLite2 City zip from API if requested
 	// otherwise assume zip is already in downloads path
 	if getNewZip {
-		svc.InfoLog.Info("fetching new GeoLite2 City zip from MaxMind API")
+		svc.Logger.Info("fetching new GeoLite2 City zip from MaxMind API")
 
 		zipBytes, err := svc.Client.GetApiGeoLite2DbZip(ctx, mmapi.GeoLite2City)
 		if err != nil {
@@ -181,7 +181,7 @@ func (svc Service) streamGeo2LiteCityBlocks(ctx context.Context, db *pgxpool.Poo
 // streamGeo2LiteCityBlocksFileTx streams a GeoLite2 City blocks csv file from the provided zip reader to the database using the provided network store and transaction.
 func (svc Service) streamGeo2LiteCityBlocksFileTx(ctx context.Context, tx pgx.Tx, networkStore mmnetwork.Store, zipReader *zip.ReadCloser, csvFileName string) (err error) {
 
-	svc.InfoLog.Debug("streaming GeoLite2 City blocks to database", slog.String("csvFileName", csvFileName))
+	svc.Logger.Debug("streaming GeoLite2 City blocks to database", slog.String("csvFileName", csvFileName))
 
 	// open csv reader for csv file in zip
 	csvReader, csvFile, err := openCsvReaderFromZip(zipReader, csvFileName)
@@ -221,7 +221,7 @@ func (svc Service) streamGeo2LiteCityBlocksFileTx(ctx context.Context, tx pgx.Tx
 		return fmt.Errorf("networkStore.BulkInsertSourceTx failed: %w", err)
 	}
 
-	svc.InfoLog.Debug("streamGeo2LiteCityBlocksFileTx: finished streaming csv rows", slog.String("fileName", csvFileName), slog.Int64("rowsInserted", rowsAffected), slog.Int("skippedCount", copySource.skippedCount))
+	svc.Logger.Debug("streamGeo2LiteCityBlocksFileTx: finished streaming csv rows", slog.String("fileName", csvFileName), slog.Int64("rowsInserted", rowsAffected), slog.Int("skippedCount", copySource.skippedCount))
 
 	return nil
 }
@@ -230,7 +230,7 @@ func (svc Service) streamGeo2LiteCityBlocksFileTx(ctx context.Context, tx pgx.Tx
 // The destination table is truncated before streaming, and all operations are done within a transaction.
 func (svc Service) streamGeo2LiteCityLocationsEn(ctx context.Context, db *pgxpool.Pool, locStore mmlocation.Store, zipReader *zip.ReadCloser) (err error) {
 
-	svc.InfoLog.Debug("streaming GeoLite2 City locations_en to database")
+	svc.Logger.Debug("streaming GeoLite2 City locations_en to database")
 
 	csvFileName := "GeoLite2-City-Locations-en.csv"
 
@@ -287,7 +287,7 @@ func (svc Service) streamGeo2LiteCityLocationsEn(ctx context.Context, db *pgxpoo
 		return fmt.Errorf("locStore.BulkInsertSourceTx failed: %w", err)
 	}
 
-	svc.InfoLog.Debug("streamGeo2LiteCityLocationsEn: finished streaming csv rows", slog.Int64("rowsInserted", rowsAffected), slog.Int("skippedCount", copySource.skippedCount))
+	svc.Logger.Debug("streamGeo2LiteCityLocationsEn: finished streaming csv rows", slog.Int64("rowsInserted", rowsAffected), slog.Int("skippedCount", copySource.skippedCount))
 
 	// commit tx
 	err = tx.Commit(ctx)

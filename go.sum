@@ -60,8 +60,8 @@ github.com/jackc/puddle/v2 v2.2.2 h1:PR8nw+E/1w0GLuRFSmiioY6UooMp6KJv0/61nB7icHo
 github.com/jackc/puddle/v2 v2.2.2/go.mod h1:vriiEXHvEE654aYKXXjOvZM39qJ0q+azkZFrfEOc3H4=
 github.com/leodido/go-urn v1.4.0 h1:WT9HwE9SGECu3lg4d/dIA+jxlljEa1/ffXKmRjqdmIQ=
 github.com/leodido/go-urn v1.4.0/go.mod h1:bvxc+MVxLKB4z00jd1z+Dvzr47oO32F/QSNjSBOlFxI=
-github.com/loveyourstack/lys v0.3.41 h1:mIcGaG2nvrLjbpo6jVeHa6vWGtCgJL56iWrU17DyBCc=
-github.com/loveyourstack/lys v0.3.41/go.mod h1:wRa21egH205LoqPvONN8VWQUsGz+TQsY+D8utcKN9Do=
+github.com/loveyourstack/lys v0.3.46 h1:4wlFYijHTlQWtvRyXGtYAmZ6g2lJdMHLmtVOdGrFeoE=
+github.com/loveyourstack/lys v0.3.46/go.mod h1:dE381esUaWZCaOQU/BGzD7yS+CwInW4X6vv/+douKR4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=

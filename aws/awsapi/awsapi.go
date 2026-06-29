@@ -26,12 +26,11 @@ type Client struct {
 
 	ec2Client *ec2.Client
 
-	errorLog *slog.Logger
-	infoLog  *slog.Logger
+	logger *slog.Logger
 }
 
 // NewClient creates a new AWS API client.
-func NewClient(conf Conf, db *pgxpool.Pool, infoLog, errorLog *slog.Logger) *Client {
+func NewClient(conf Conf, db *pgxpool.Pool, logger *slog.Logger) *Client {
 
 	if conf.AccessKeyId == "" {
 		log.Fatal("awsapi client: conf.AccessKeyId is required")
@@ -52,8 +51,7 @@ func NewClient(conf Conf, db *pgxpool.Pool, infoLog, errorLog *slog.Logger) *Cli
 
 		ec2Client: nil, // lazily initialized in makeEc2Client
 
-		infoLog:  infoLog.With("api", apiShortname),
-		errorLog: errorLog.With("api", apiShortname),
+		logger: logger.With("api", apiShortname),
 	}
 }
 

@@ -77,7 +77,7 @@ func (c Client) GetApiExchangeRates(ctx context.Context, baseCurr string, freq F
 
 		_, err := c.callStore.Insert(context.Background(), callInput) // use background context to ensure call log is inserted even if main context is cancelled
 		if err != nil {
-			c.errorLog.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
+			c.logger.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
 		}
 	}()
 

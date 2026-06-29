@@ -83,7 +83,7 @@ func (svc Service) SyncExchangeRates(ctx context.Context, db *pgxpool.Pool, base
 		if err != nil {
 			return fmt.Errorf("itemStore.BulkDelete failed: %w", err)
 		}
-		svc.InfoLog.Info("deleted", slog.String("type", itemType), slog.Int("num", len(deletedIds)))
+		svc.Logger.Info("deleted", slog.String("type", itemType), slog.Int("num", len(deletedIds)))
 	}
 
 	// run inserts
@@ -92,7 +92,7 @@ func (svc Service) SyncExchangeRates(ctx context.Context, db *pgxpool.Pool, base
 		if err != nil {
 			return fmt.Errorf("itemStore.BulkInsert failed: %w", err)
 		}
-		svc.InfoLog.Info("inserted", slog.String("type", itemType), slog.Int("num", len(newItems)))
+		svc.Logger.Info("inserted", slog.String("type", itemType), slog.Int("num", len(newItems)))
 	}
 
 	// run updates
@@ -101,7 +101,7 @@ func (svc Service) SyncExchangeRates(ctx context.Context, db *pgxpool.Pool, base
 		if err != nil {
 			return fmt.Errorf("itemStore.BulkUpdate failed: %w", err)
 		}
-		svc.InfoLog.Info("updated", slog.String("type", itemType), slog.Int("num", len(updatedItems)))
+		svc.Logger.Info("updated", slog.String("type", itemType), slog.Int("num", len(updatedItems)))
 	}
 
 	return nil

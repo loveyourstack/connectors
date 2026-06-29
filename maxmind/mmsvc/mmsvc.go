@@ -12,11 +12,10 @@ type Service struct {
 	Client        mmapi.Client
 	DownloadsPath string
 
-	InfoLog  *slog.Logger
-	ErrorLog *slog.Logger
+	Logger *slog.Logger
 }
 
-func NewService(client mmapi.Client, downloadsPath string, infoLog, errorLog *slog.Logger) (svc Service) {
+func NewService(client mmapi.Client, downloadsPath string, logger *slog.Logger) (svc Service) {
 
 	if downloadsPath == "" {
 		log.Fatal("maxmind svc: downloadsPath is required")
@@ -34,7 +33,6 @@ func NewService(client mmapi.Client, downloadsPath string, infoLog, errorLog *sl
 		Client:        client,
 		DownloadsPath: downloadsPath,
 
-		InfoLog:  infoLog.With("svc", svcShortname),
-		ErrorLog: errorLog.With("svc", svcShortname),
+		Logger: logger.With("svc", svcShortname),
 	}
 }

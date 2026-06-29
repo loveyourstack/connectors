@@ -41,7 +41,7 @@ func ExchangeRatesCmd(cliApp *cliapp.App) *cobra.Command {
 				return fmt.Errorf("ecbsvc.SyncExchangeRates (Monthly) failed: %w", err)
 			}*/
 
-			cliApp.InfoLog.Debug("done")
+			cliApp.Logger.Debug("done")
 
 			return nil
 		},

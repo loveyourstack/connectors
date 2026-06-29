@@ -75,14 +75,14 @@ func Execute() {
 	defer cliApp.Db.Close()
 
 	// attach API clients
-	cliApp.AwsClient = awsapi.NewClient(conf.Aws, cliApp.Db, cliApp.InfoLog, cliApp.ErrorLog)
-	cliApp.EcbClient = ecbapi.NewClient(cliApp.Db, cliApp.InfoLog, cliApp.ErrorLog)
-	cliApp.MaxMindClient = mmapi.NewClient(cliApp.Config.MaxMind, cliApp.Db, cliApp.InfoLog, cliApp.ErrorLog)
+	cliApp.AwsClient = awsapi.NewClient(conf.Aws, cliApp.Db, cliApp.Logger)
+	cliApp.EcbClient = ecbapi.NewClient(cliApp.Db, cliApp.Logger)
+	cliApp.MaxMindClient = mmapi.NewClient(cliApp.Config.MaxMind, cliApp.Db, cliApp.Logger)
 
 	// attach services
-	cliApp.AwsSvc = awssvc.NewService(cliApp.Db, cliApp.AwsClient, cliApp.InfoLog, cliApp.ErrorLog)
-	cliApp.EcbSvc = ecbsvc.NewService(cliApp.EcbClient, cliApp.InfoLog, cliApp.ErrorLog)
-	cliApp.MaxMindSvc = mmsvc.NewService(cliApp.MaxMindClient, cliApp.Config.General.DownloadsPath, cliApp.InfoLog, cliApp.ErrorLog)
+	cliApp.AwsSvc = awssvc.NewService(cliApp.Db, cliApp.AwsClient, cliApp.Logger)
+	cliApp.EcbSvc = ecbsvc.NewService(cliApp.EcbClient, cliApp.Logger)
+	cliApp.MaxMindSvc = mmsvc.NewService(cliApp.MaxMindClient, cliApp.Config.General.DownloadsPath, cliApp.Logger)
 
 	// note that defer db Close is also needed in subcommands or else context cancelation doesn't propagate to db
 

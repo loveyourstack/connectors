@@ -37,7 +37,7 @@ func (c *Client) GetApiEc2SecGroups(ctx context.Context) (secGroups []awsTypes.S
 
 		_, err := c.callStore.Insert(context.Background(), callInput) // use background context to ensure call log is inserted even if main context is cancelled
 		if err != nil {
-			c.errorLog.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
+			c.logger.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
 		}
 	}()
 
@@ -94,7 +94,7 @@ func (c *Client) getApiEc2SecGroupRules(ctx context.Context, filter awsTypes.Fil
 
 		_, err := c.callStore.Insert(context.Background(), callInput) // use background context to ensure call log is inserted even if main context is cancelled
 		if err != nil {
-			c.errorLog.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
+			c.logger.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
 		}
 	}()
 
@@ -222,7 +222,7 @@ func (c *Client) SetEc2SecGroupRulesIp(ctx context.Context, newIp netip.Addr, ru
 
 			_, err := c.callStore.Insert(context.Background(), callInput) // use background context to ensure call log is inserted even if main context is cancelled
 			if err != nil {
-				c.errorLog.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
+				c.logger.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
 			}
 		}()
 

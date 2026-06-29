@@ -14,12 +14,11 @@ type Service struct {
 
 	userSgRuleStore awsusersgrule.Store
 
-	infoLog  *slog.Logger
-	errorLog *slog.Logger
+	logger *slog.Logger
 }
 
 // NewService creates a new AWS service.
-func NewService(db *pgxpool.Pool, client *awsapi.Client, infoLog, errorLog *slog.Logger) (svc Service) {
+func NewService(db *pgxpool.Pool, client *awsapi.Client, logger *slog.Logger) (svc Service) {
 
 	if client == nil {
 		log.Fatal("awssvc: client is required")
@@ -32,7 +31,6 @@ func NewService(db *pgxpool.Pool, client *awsapi.Client, infoLog, errorLog *slog
 
 		userSgRuleStore: awsusersgrule.Store{Db: db},
 
-		infoLog:  infoLog.With("svc", svcShortname),
-		errorLog: errorLog.With("svc", svcShortname),
+		logger: logger.With("svc", svcShortname),
 	}
 }

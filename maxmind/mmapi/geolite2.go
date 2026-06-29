@@ -36,7 +36,7 @@ func (c Client) GetApiGeoLite2DbLastModified(ctx context.Context, geoDb GeoLite2
 
 		_, err := c.callStore.Insert(context.Background(), callInput) // use background context to ensure call log is inserted even if main context is cancelled
 		if err != nil {
-			c.errorLog.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
+			c.logger.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
 		}
 	}()
 
@@ -93,7 +93,7 @@ func (c Client) GetApiGeoLite2DbZip(ctx context.Context, geoDb GeoLite2Db) (resp
 
 		_, err := c.callStore.Insert(context.Background(), callInput) // use background context to ensure call log is inserted even if main context is cancelled
 		if err != nil {
-			c.errorLog.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
+			c.logger.Error("c.callStore.Insert failed", "error", err, "callInput", callInput)
 		}
 	}()
 

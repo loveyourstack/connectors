@@ -23,7 +23,7 @@ func CurrenciesCmd(cliApp *cliapp.App) *cobra.Command {
 				return fmt.Errorf("ecbsvc.SyncCurrencies failed: %w", err)
 			}
 
-			cliApp.InfoLog.Debug("done")
+			cliApp.Logger.Debug("done")
 
 			return nil
 		},
