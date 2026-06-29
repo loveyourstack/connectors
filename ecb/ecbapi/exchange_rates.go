@@ -99,9 +99,8 @@ func (c Client) GetApiExchangeRates(ctx context.Context, baseCurr string, freq F
 	}
 
 	if len(csvContent) < 2 {
-		errMsg := "no rates found for these params"
-		callInput.Result = errMsg
-		return nil, fmt.Errorf("%s", errMsg)
+		callInput.Result = ErrNoRatesFound.Error()
+		return nil, ErrNoRatesFound
 	}
 
 	/* csvContent looks like this:
