@@ -10,7 +10,15 @@ import (
 	"github.com/loveyourstack/connectors/ecb/ecbapi"
 	"github.com/loveyourstack/connectors/ecb/stores/ecbcurrency"
 	"github.com/loveyourstack/connectors/ecb/stores/ecbexchangerate"
+	"github.com/loveyourstack/lys/lystype"
 )
+
+func (svc Service) SelectExchangeRatesLastSyncAt(ctx context.Context) (lastSyncAt lystype.Datetime, err error) {
+	if svc.SyncStore == nil {
+		return lystype.Datetime{}, fmt.Errorf("no sync store provided")
+	}
+	return svc.SyncStore.SelectLastSyncAt(ctx, ExchangeRatesSync)
+}
 
 // SyncExchangeRates syncs the ECB exchange rates from the API to the DB, comparing items in bulk.
 func (svc Service) SyncExchangeRates(ctx context.Context, db *pgxpool.Pool, baseCurr string, freq ecbapi.Frequency, startDate, endDate time.Time) error {
@@ -102,6 +110,14 @@ func (svc Service) SyncExchangeRates(ctx context.Context, db *pgxpool.Pool, base
 			return fmt.Errorf("itemStore.BulkUpdate failed: %w", err)
 		}
 		svc.Logger.Info("updated", slog.String("type", itemType), slog.Int("num", len(updatedItems)))
+	}
+
+	// if a sync store is provided, upsert the last sync time
+	if svc.SyncStore != nil {
+		err = svc.SyncStore.Upsert(ctx, ExchangeRatesSync)
+		if err != nil {
+			return fmt.Errorf("svc.SyncStore.Upsert failed: %w", err)
+		}
 	}
 
 	return nil

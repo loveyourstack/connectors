@@ -21,6 +21,13 @@ import (
 	"github.com/loveyourstack/lys/lystype"
 )
 
+func (svc Service) SelectGeo2LiteCityLastSyncAt(ctx context.Context) (lastSyncAt lystype.Datetime, err error) {
+	if svc.SyncStore == nil {
+		return lystype.Datetime{}, fmt.Errorf("no sync store provided")
+	}
+	return svc.SyncStore.SelectLastSyncAt(ctx, Geo2LiteCitySync)
+}
+
 func (svc Service) WriteGeo2LiteCity(ctx context.Context, db *pgxpool.Pool, getNewZip bool) (err error) {
 
 	zipFilename := fmt.Sprintf("%s.zip", mmapi.GeoLite2City)
@@ -85,6 +92,14 @@ func (svc Service) WriteGeo2LiteCity(ctx context.Context, db *pgxpool.Pool, getN
 	err = metaStore.Upsert(ctx, input)
 	if err != nil {
 		return fmt.Errorf("metaStore.Upsert failed: %w", err)
+	}
+
+	// if a sync store is provided, upsert the last sync time
+	if svc.SyncStore != nil {
+		err = svc.SyncStore.Upsert(ctx, Geo2LiteCitySync)
+		if err != nil {
+			return fmt.Errorf("svc.SyncStore.Upsert failed: %w", err)
+		}
 	}
 
 	return nil

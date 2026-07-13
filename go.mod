@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.307.0
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/loveyourstack/lys v0.3.46
+	github.com/loveyourstack/lys v0.3.50
 	github.com/spf13/cobra v1.10.2
 )
 

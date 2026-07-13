@@ -7,7 +7,15 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/loveyourstack/connectors/ecb/stores/ecbcurrency"
+	"github.com/loveyourstack/lys/lystype"
 )
+
+func (svc Service) SelectCurrenciesLastSyncAt(ctx context.Context) (lastSyncAt lystype.Datetime, err error) {
+	if svc.SyncStore == nil {
+		return lystype.Datetime{}, fmt.Errorf("no sync store provided")
+	}
+	return svc.SyncStore.SelectLastSyncAt(ctx, CurrenciesSync)
+}
 
 // SyncCurrencies syncs the ECB currencies from the API to the DB, comparing items one by one.
 func (svc Service) SyncCurrencies(ctx context.Context, db *pgxpool.Pool) error {
@@ -70,6 +78,14 @@ func (svc Service) SyncCurrencies(ctx context.Context, db *pgxpool.Pool) error {
 				return fmt.Errorf("itemStore.Delete failed on key: %v: %w", key, err)
 			}
 			svc.Logger.Info("deleted", slog.String("type", itemType), slog.Any("code", dbItem.Code))
+		}
+	}
+
+	// if a sync store is provided, upsert the last sync time
+	if svc.SyncStore != nil {
+		err = svc.SyncStore.Upsert(ctx, CurrenciesSync)
+		if err != nil {
+			return fmt.Errorf("svc.SyncStore.Upsert failed: %w", err)
 		}
 	}
 

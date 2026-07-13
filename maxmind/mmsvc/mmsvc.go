@@ -6,13 +6,21 @@ import (
 	"os"
 
 	"github.com/loveyourstack/connectors/maxmind/mmapi"
+	"github.com/loveyourstack/lys/lysextdata"
+)
+
+const (
+	// sync keys
+	Geo2LiteCitySync lysextdata.SyncKey = "MaxMindGeo2LiteCity"
 )
 
 type Service struct {
 	Client        mmapi.Client
 	DownloadsPath string
+	Logger        *slog.Logger
 
-	Logger *slog.Logger
+	// optional
+	SyncStore lysextdata.ISyncStore
 }
 
 func NewService(client mmapi.Client, downloadsPath string, logger *slog.Logger) (svc Service) {
@@ -32,7 +40,12 @@ func NewService(client mmapi.Client, downloadsPath string, logger *slog.Logger) 
 	return Service{
 		Client:        client,
 		DownloadsPath: downloadsPath,
-
-		Logger: logger.With("svc", svcShortname),
+		Logger:        logger.With("svc", svcShortname),
 	}
+}
+
+func NewServiceWithSyncStore(client mmapi.Client, downloadsPath string, logger *slog.Logger, syncStore lysextdata.ISyncStore) (svc Service) {
+	svc = NewService(client, downloadsPath, logger)
+	svc.SyncStore = syncStore
+	return svc
 }
