@@ -59,7 +59,7 @@ func (c Client) GetApiCurrencies(ctx context.Context) (currencies []Currency, er
 	if err != nil {
 		errMsg := "xml.Unmarshal failed: "
 		callInput.Result = errMsg + err.Error()
-		return nil, fmt.Errorf("%s: %w", errMsg, err)
+		return nil, fmt.Errorf("%s%w", errMsg, err)
 	}
 
 	// parse out currencies
@@ -82,7 +82,6 @@ func (c Client) GetApiCurrencies(ctx context.Context) (currencies []Currency, er
 	}
 
 	callInput.Result = "OK"
-
 	return currencies, nil
 }
 

@@ -17,10 +17,13 @@ import (
 	"github.com/loveyourstack/connectors/internal/cmd/connscli/subcmds/awspcli"
 	"github.com/loveyourstack/connectors/internal/cmd/connscli/subcmds/ecbcli"
 	"github.com/loveyourstack/connectors/internal/cmd/connscli/subcmds/mmcli"
+	"github.com/loveyourstack/connectors/internal/cmd/connscli/subcmds/tedbcli"
 	"github.com/loveyourstack/connectors/internal/myapp"
 	"github.com/loveyourstack/connectors/internal/stores/sysextdatasync"
 	"github.com/loveyourstack/connectors/maxmind/mmapi"
 	"github.com/loveyourstack/connectors/maxmind/mmsvc"
+	"github.com/loveyourstack/connectors/tedb/tedbapi"
+	"github.com/loveyourstack/connectors/tedb/tedbsvc"
 	"github.com/loveyourstack/lys/lyserr"
 	"github.com/loveyourstack/lys/lyspgdb"
 	"github.com/spf13/cobra"
@@ -43,6 +46,7 @@ func addSubCommands() {
 	rootCmd.AddCommand(awspcli.NewCmd(cliApp))
 	rootCmd.AddCommand(ecbcli.NewCmd(cliApp))
 	rootCmd.AddCommand(mmcli.NewCmd(cliApp))
+	rootCmd.AddCommand(tedbcli.NewCmd(cliApp))
 }
 
 func Execute() {
@@ -79,12 +83,14 @@ func Execute() {
 	cliApp.AwsClient = awsapi.NewClient(conf.Aws, cliApp.Db, cliApp.Logger)
 	cliApp.EcbClient = ecbapi.NewClient(cliApp.Db, cliApp.Logger)
 	cliApp.MaxMindClient = mmapi.NewClient(cliApp.Config.MaxMind, cliApp.Db, cliApp.Logger)
+	cliApp.TedbClient = tedbapi.NewClient(cliApp.Db, cliApp.Logger)
 
 	// attach services
 	syncStore := sysextdatasync.Store{Db: cliApp.Db}
 	cliApp.AwsSvc = awssvc.NewService(cliApp.Db, cliApp.AwsClient, cliApp.Logger)
 	cliApp.EcbSvc = ecbsvc.NewServiceWithSyncStore(cliApp.EcbClient, cliApp.Logger, syncStore)
 	cliApp.MaxMindSvc = mmsvc.NewServiceWithSyncStore(cliApp.MaxMindClient, cliApp.Config.General.DownloadsPath, cliApp.Logger, syncStore)
+	cliApp.TedbSvc = tedbsvc.NewServiceWithSyncStore(cliApp.TedbClient, cliApp.Logger, syncStore)
 
 	// note that defer db Close is also needed in subcommands or else context cancelation doesn't propagate to db
 

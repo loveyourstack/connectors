@@ -8,9 +8,11 @@ import (
 	"github.com/loveyourstack/connectors/internal/cmd"
 	"github.com/loveyourstack/connectors/maxmind/mmapi"
 	"github.com/loveyourstack/connectors/maxmind/mmsvc"
+	"github.com/loveyourstack/connectors/tedb/tedbapi"
+	"github.com/loveyourstack/connectors/tedb/tedbsvc"
 )
 
-// App is a lyscli application
+// App is a connscli application
 type App struct {
 	*cmd.Application
 
@@ -18,9 +20,11 @@ type App struct {
 	AwsClient     *awsapi.Client
 	EcbClient     ecbapi.Client
 	MaxMindClient mmapi.Client
+	TedbClient    tedbapi.Client
 
 	// services
 	AwsSvc     awssvc.Service
 	EcbSvc     ecbsvc.Service
 	MaxMindSvc mmsvc.Service
+	TedbSvc    tedbsvc.Service
 }

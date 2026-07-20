@@ -95,7 +95,7 @@ func (c Client) GetApiExchangeRates(ctx context.Context, baseCurr string, freq F
 	if err != nil {
 		errMsg := "csv.NewReader().ReadAll failed: "
 		callInput.Result = errMsg + err.Error()
-		return nil, fmt.Errorf("%s: %w", errMsg, err)
+		return nil, fmt.Errorf("%s%w", errMsg, err)
 	}
 
 	if len(csvContent) < 2 {
@@ -136,14 +136,13 @@ func (c Client) GetApiExchangeRates(ctx context.Context, baseCurr string, freq F
 		if err != nil {
 			errMsg := fmt.Sprintf("strconv.ParseFloat failed for rate '%s' on line %d: ", lineA[7], i)
 			callInput.Result = errMsg + err.Error()
-			return nil, fmt.Errorf("%s: %w", errMsg, err)
+			return nil, fmt.Errorf("%s%w", errMsg, err)
 		}
 
 		exRates = append(exRates, exRate)
 	}
 
 	callInput.Result = "OK"
-
 	return exRates, nil
 }
 
