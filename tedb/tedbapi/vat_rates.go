@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/loveyourstack/connectors/tedb/stores/tedbapicall"
+	"github.com/loveyourstack/connectors/tedb/stores/tedbvatcategory"
 	"github.com/loveyourstack/connectors/tedb/stores/tedbvatrate"
+	"github.com/loveyourstack/lys/lysset"
 	"github.com/loveyourstack/lys/lystype"
 )
 
@@ -240,8 +242,32 @@ func (c Client) GetVatRates(ctx context.Context, countryISOs []string, startDate
 		return nil, fmt.Errorf("c.GetApiVatRates failed: %w", err)
 	}
 
+	// do a pass through items to get distinct categories
+	seen := lysset.New[string]()
+	cats := []tedbvatcategory.Input{}
 	for _, apiItem := range apiItems {
-		_item, err := apiVatRateToItem(apiItem)
+		if apiItem.Category == nil {
+			continue
+		}
+		if seen.Contains(apiItem.Category.Identifier) {
+			continue
+		}
+
+		seen.Add(apiItem.Category.Identifier)
+		cats = append(cats, tedbvatcategory.Input{
+			Description: apiItem.Category.Description,
+			Identifier:  apiItem.Category.Identifier,
+		})
+	}
+
+	// get categories map, inserting new ones as needed
+	catMap, err := c.getCategoriesMap(ctx, cats)
+	if err != nil {
+		return nil, fmt.Errorf("c.getCategoriesMap failed: %w", err)
+	}
+
+	for _, apiItem := range apiItems {
+		_item, err := c.apiVatRateToItem(apiItem, catMap)
 		if err != nil {
 			return nil, fmt.Errorf("apiVatRateToItem failed: %w", err)
 		}
@@ -251,7 +277,43 @@ func (c Client) GetVatRates(ctx context.Context, countryISOs []string, startDate
 	return items, nil
 }
 
-func apiVatRateToItem(apiItem VatRateResult) (item tedbvatrate.Input, err error) {
+func (c Client) GetVatRatesMap(ctx context.Context, countryISOs []string, startDate, endDate time.Time) (itemsMap map[string]tedbvatrate.Model, err error) {
+
+	items, err := c.GetVatRates(ctx, countryISOs, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("c.GetVatRates failed: %w", err)
+	}
+
+	// convert to map with situation_on + member_state + type + category_fk + cn_codes + cpa_codes + comment as key
+	itemsMap = make(map[string]tedbvatrate.Model)
+	for _, input := range items {
+
+		// API sometimes returns items outside the requested date range. Filter them out so that API to DB sync comparison works correctly
+		situationOnT := time.Time(input.SituationOn)
+		if situationOnT.Before(startDate) || situationOnT.After(endDate) {
+			continue
+		}
+
+		// DE data in 2025-2026 is duplicated with records where the comment starts with "VAT - Import - ". Filter them out
+		if input.MemberState == "DE" && strings.HasPrefix(input.Comment, "VAT - Import - ") {
+			continue
+		}
+
+		item := tedbvatrate.Model{
+			Input: input,
+		}
+		key := fmt.Sprintf("%s+%s+%s+%v+%s+%s+%s", input.SituationOn.String(), input.MemberState, input.Type, input.CategoryFk,
+			strings.Join(input.CnCodes, ","), strings.Join(input.CpaCodes, ","), input.Comment)
+
+		// there are a few duplicates remaining even with this large key. Sometimes they are explained in the comment field, but usually not.
+		// de-duping the data is more important, so let the later record overwrite the earlier one
+		itemsMap[key] = item
+	}
+
+	return itemsMap, nil
+}
+
+func (c Client) apiVatRateToItem(apiItem VatRateResult, catMap map[string]int64) (item tedbvatrate.Input, err error) {
 
 	rate := 0.0
 	if apiItem.Rate.Value != nil {
@@ -263,21 +325,23 @@ func apiVatRateToItem(apiItem VatRateResult) (item tedbvatrate.Input, err error)
 	}
 
 	item = tedbvatrate.Input{
-		CategoryDescription: "",
-		CategoryIdentifier:  "",
-		CnCodes:             []string{},
-		Comment:             apiItem.Comment,
-		CpaCodes:            []string{},
-		MemberState:         apiItem.MemberState,
-		RateType:            apiItem.Rate.Type,
-		Rate:                rate,
-		SituationOn:         lystype.Date(situationOnT),
-		Type:                apiItem.Type,
+		CategoryFk:  -1, // None
+		CnCodes:     []string{},
+		Comment:     apiItem.Comment,
+		CpaCodes:    []string{},
+		MemberState: apiItem.MemberState,
+		RateType:    apiItem.Rate.Type,
+		Rate:        rate,
+		SituationOn: lystype.Date(situationOnT),
+		Type:        apiItem.Type,
 	}
 
 	if apiItem.Category != nil {
-		item.CategoryDescription = apiItem.Category.Description
-		item.CategoryIdentifier = apiItem.Category.Identifier
+		if id, ok := catMap[apiItem.Category.Identifier]; ok {
+			item.CategoryFk = id
+		} else {
+			return item, fmt.Errorf("category identifier '%s' not found in catMap", apiItem.Category.Identifier)
+		}
 	}
 	if apiItem.CNCodes != nil {
 		for _, cnCode := range apiItem.CNCodes.Code {
@@ -297,4 +361,39 @@ func apiVatRateToItem(apiItem VatRateResult) (item tedbvatrate.Input, err error)
 	}
 
 	return item, nil
+}
+
+func (c Client) getCategoriesMap(ctx context.Context, inputs []tedbvatcategory.Input) (catMap map[string]int64, err error) {
+
+	// select existing categories from DB
+	catMap, err = c.catStore.SelectIdentifierIdMap(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("c.catStore.SelectIdentifierIdMap failed: %w", err)
+	}
+
+	// check if new categories need to be inserted
+	newCats := []tedbvatcategory.Input{}
+	for _, input := range inputs {
+		if _, ok := catMap[input.Identifier]; !ok {
+			newCats = append(newCats, input)
+		}
+	}
+
+	// return if no new categories to insert
+	if len(newCats) == 0 {
+		return catMap, nil
+	}
+
+	// insert new categories
+	for _, newCat := range newCats {
+		newId, err := c.catStore.Insert(ctx, newCat)
+		if err != nil {
+			return nil, fmt.Errorf("c.catStore.Insert failed for category: %s: %w", newCat.Identifier, err)
+		}
+		c.logger.Info("inserted new category", "identifier", newCat.Identifier, "id", newId)
+		catMap[newCat.Identifier] = newId
+	}
+
+	// return updated map
+	return catMap, nil
 }

@@ -53,10 +53,13 @@ func (svc Service) SyncVatRates(ctx context.Context, db *pgxpool.Pool, startDate
 
 	// high volume: uses store bulk methods
 
+	// the data is messy and it was hard to find a good natural key which works for almost all items. In the end I used:
+	// situation_on + member_state + type + category_fk + cn_codes + cpa_codes + comment
+
 	// select API items in date range
-	apiItemsMap, err := svc.Client.GetVatRates(ctx, euCountryIsos, startDate, endDate)
+	apiItemsMap, err := svc.Client.GetVatRatesMap(ctx, euCountryIsos, startDate, endDate)
 	if err != nil {
-		return fmt.Errorf("svc.Client.GetVatRates failed: %w", err)
+		return fmt.Errorf("svc.Client.GetVatRatesMap failed: %w", err)
 	}
 	if len(apiItemsMap) == 0 {
 		return fmt.Errorf("API returned no items, refusing to sync")
@@ -65,24 +68,22 @@ func (svc Service) SyncVatRates(ctx context.Context, db *pgxpool.Pool, startDate
 	itemStore := tedbvatrate.Store{Db: db}
 	itemType := "TEDB VAT rates"
 
-	// select DB items map in date range with day+toCurrFk as key
-	/*dbItemsMap, err := itemStore.SelectMapByNaturalKey(ctx, baseCurr, freq.String(), startDate, endDate)
+	// select DB items map in date range
+	dbItemsMap, err := itemStore.SelectMapByNaturalKey(ctx, startDate, endDate)
 	if err != nil {
 		return fmt.Errorf("itemStore.SelectMapByNaturalKey failed: %w", err)
-	}*/
+	}
 
 	newItems := []tedbvatrate.Input{}
-	//updatedIds := []int64{}
-	//updatedItems := []tedbvatrate.Input{}
-	//deletedIds := []int64{}
+	updatedIds := []int64{}
+	updatedItems := []tedbvatrate.Input{}
+	deletedIds := []int64{}
 
 	// for each API item
-	for _, apiItem := range apiItemsMap {
-
-		newItems = append(newItems, apiItem)
+	for key, apiItem := range apiItemsMap {
 
 		// try to find the equivalent DB item
-		/*dbItem, ok := dbItemsMap[key]
+		dbItem, ok := dbItemsMap[key]
 		if !ok {
 			newItems = append(newItems, apiItem.Input)
 			continue
@@ -92,27 +93,27 @@ func (svc Service) SyncVatRates(ctx context.Context, db *pgxpool.Pool, startDate
 		if !itemStore.Equal(apiItem, dbItem) {
 			updatedIds = append(updatedIds, dbItem.Id)
 			updatedItems = append(updatedItems, apiItem.Input)
-		}*/
+		}
 	}
 
 	// for each DB item
-	/*for key, dbItem := range dbItemsMap {
+	for key, dbItem := range dbItemsMap {
 
 		// try to find the equivalent API item
 		_, ok := apiItemsMap[key]
 		if !ok {
 			deletedIds = append(deletedIds, dbItem.Id)
 		}
-	}*/
+	}
 
 	// run deletes
-	/*if len(deletedIds) > 0 {
+	if len(deletedIds) > 0 {
 		err := itemStore.BulkDelete(ctx, deletedIds)
 		if err != nil {
 			return fmt.Errorf("itemStore.BulkDelete failed: %w", err)
 		}
 		svc.Logger.Info("deleted", slog.String("type", itemType), slog.Int("num", len(deletedIds)))
-	}*/
+	}
 
 	// run inserts
 	if len(newItems) > 0 {
@@ -124,13 +125,13 @@ func (svc Service) SyncVatRates(ctx context.Context, db *pgxpool.Pool, startDate
 	}
 
 	// run updates
-	/*if len(updatedItems) > 0 {
+	if len(updatedItems) > 0 {
 		err := itemStore.BulkUpdate(ctx, updatedItems, updatedIds)
 		if err != nil {
 			return fmt.Errorf("itemStore.BulkUpdate failed: %w", err)
 		}
 		svc.Logger.Info("updated", slog.String("type", itemType), slog.Int("num", len(updatedItems)))
-	}*/
+	}
 
 	// if a sync store is provided, upsert the last sync time
 	if svc.SyncStore != nil {
