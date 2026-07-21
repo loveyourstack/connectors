@@ -48,14 +48,6 @@ func NewClient(db *pgxpool.Pool, logger *slog.Logger) (client Client) {
 
 func (c Client) doRequest(ctx context.Context, url, soapAction string, body io.Reader) (respBody []byte, attempt, statusCode int, err error) {
 
-	// define request
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
-	if err != nil {
-		return nil, 0, 0, fmt.Errorf("http.NewRequestWithContext failed: %w", err)
-	}
-	req.Header.Set("Content-Type", "text/xml; charset=utf-8")
-	req.Header.Set("SOAPAction", soapAction)
-
 	// start attempts loop
 	maxAttempts := 3
 	defaultBackoff := 5 * time.Second
@@ -67,6 +59,14 @@ func (c Client) doRequest(ctx context.Context, url, soapAction string, body io.R
 		if attempt > maxAttempts {
 			return nil, attempt, 0, fmt.Errorf("max attempts exceeded (%d)", maxAttempts)
 		}
+
+		// define request
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+		if err != nil {
+			return nil, 0, 0, fmt.Errorf("http.NewRequestWithContext failed: %w", err)
+		}
+		req.Header.Set("Content-Type", "text/xml; charset=utf-8")
+		req.Header.Set("SOAPAction", soapAction)
 
 		// do request
 		resp, err := c.httpClient.Do(req)
@@ -100,6 +100,7 @@ func (c Client) doRequest(ctx context.Context, url, soapAction string, body io.R
 		// read body
 		respBody, err = io.ReadAll(resp.Body)
 		if err != nil {
+			resp.Body.Close()
 			return nil, attempt, resp.StatusCode, fmt.Errorf("io.ReadAll failed: %w", err)
 		}
 

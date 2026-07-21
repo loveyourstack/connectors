@@ -45,12 +45,6 @@ func NewClient(db *pgxpool.Pool, logger *slog.Logger) (client Client) {
 
 func (c Client) doRequest(ctx context.Context, method, url string, body io.Reader) (respBody []byte, attempt, statusCode int, err error) {
 
-	// define request
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
-	if err != nil {
-		return nil, 0, 0, fmt.Errorf("http.NewRequestWithContext failed: %w", err)
-	}
-
 	// start attempts loop
 	maxAttempts := 3
 	defaultBackoff := 5 * time.Second
@@ -61,6 +55,12 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 		// check max attempts
 		if attempt > maxAttempts {
 			return nil, attempt, 0, fmt.Errorf("max attempts exceeded (%d)", maxAttempts)
+		}
+
+		// define request
+		req, err := http.NewRequestWithContext(ctx, method, url, body)
+		if err != nil {
+			return nil, 0, 0, fmt.Errorf("http.NewRequestWithContext failed: %w", err)
 		}
 
 		// do request
@@ -95,6 +95,7 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 		// read body
 		respBody, err = io.ReadAll(resp.Body)
 		if err != nil {
+			resp.Body.Close()
 			return nil, attempt, resp.StatusCode, fmt.Errorf("io.ReadAll failed: %w", err)
 		}
 

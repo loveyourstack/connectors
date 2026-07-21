@@ -257,7 +257,7 @@ func (c Client) GetVatRates(ctx context.Context, countryISOs []string, startDate
 		return nil, fmt.Errorf("c.getCategoriesMap failed: %w", err)
 	}
 
-	// add new codes to db
+	// add new CN and CPA codes to db
 	err = c.addNewCodesToDb(ctx, cnCodes, cpaCodes)
 	if err != nil {
 		return nil, fmt.Errorf("c.addNewCodesToDb failed: %w", err)
@@ -281,14 +281,19 @@ func (c Client) GetVatRatesMap(ctx context.Context, countryISOs []string, startD
 		return nil, fmt.Errorf("c.GetVatRates failed: %w", err)
 	}
 
+	// normalize startDate and endDate to midnight UTC to ensure that situation_on comparisons work correctly below
+	startDateOnly := time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
+	endDateOnly := time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 0, 0, 0, 0, time.UTC)
+
 	// convert to map with situation_on + member_state + type + category_fk + cn_codes + cpa_codes + comment as key
 	itemsMap = make(map[string]tedbvatrate.Model)
 	for _, input := range items {
 
 		// API sometimes returns items outside the requested date range. Filter them out so that API to DB sync comparison works correctly
 		situationOnT := time.Time(input.SituationOn)
-		if situationOnT.Before(startDate) || situationOnT.After(endDate) {
-			//c.logger.Debug("skipping API item outside requested date range", "situationOn", situationOnT, "startDate", startDate, "endDate", endDate)
+		situationOnDate := time.Date(situationOnT.Year(), situationOnT.Month(), situationOnT.Day(), 0, 0, 0, 0, time.UTC)
+		if situationOnDate.Before(startDateOnly) || situationOnDate.After(endDateOnly) {
+			//c.logger.Debug("skipping API item outside requested date range", "situationOn", situationOnDate, "startDate", startDateOnly, "endDate", endDateOnly)
 			continue
 		}
 
@@ -316,6 +321,10 @@ func (c Client) apiVatRateToItem(apiItem VatRateResult, catMap map[string]int64)
 	rate := 0.0
 	if apiItem.Rate.Value != nil {
 		rate = *apiItem.Rate.Value
+	}
+
+	if len(apiItem.SituationOn) < 10 {
+		return item, fmt.Errorf("apiItem.SituationOn is too short to parse as a date: '%s'", apiItem.SituationOn)
 	}
 	situationOnT, err := time.Parse("2006-01-02", apiItem.SituationOn[0:10]) // ignore timezone offset so that comparison with start/end date works correctly
 	if err != nil {
@@ -348,7 +357,7 @@ func (c Client) apiVatRateToItem(apiItem VatRateResult, catMap map[string]int64)
 			}
 			item.CnCodes = append(item.CnCodes, cnCode.Value)
 		}
-		slices.Sort(item.CnCodes)
+		slices.Sort(item.CnCodes) // sort for deterministic comparison
 	}
 	if apiItem.CPACodes != nil {
 		for _, cpaCode := range apiItem.CPACodes.Code {
@@ -357,7 +366,7 @@ func (c Client) apiVatRateToItem(apiItem VatRateResult, catMap map[string]int64)
 			}
 			item.CpaCodes = append(item.CpaCodes, cpaCode.Value)
 		}
-		slices.Sort(item.CpaCodes)
+		slices.Sort(item.CpaCodes) // sort for deterministic comparison
 	}
 
 	return item, nil
@@ -480,17 +489,20 @@ func (c Client) addNewCodesToDb(ctx context.Context, cnCodes []tedbvatcncode.Inp
 	}
 
 	// add new codes to db
-	for _, cnCode := range newCnCodes {
-		_, err := c.cnCodeStore.Insert(ctx, cnCode)
+	if len(newCnCodes) > 0 {
+		_, err := c.cnCodeStore.BulkInsert(ctx, newCnCodes)
 		if err != nil {
-			return fmt.Errorf("c.cnCodeStore.Insert failed for CN code '%s': %w", cnCode.Value, err)
+			return fmt.Errorf("c.cnCodeStore.BulkInsert failed: %w", err)
 		}
+		c.logger.Info("inserted new CN codes", "count", len(newCnCodes))
 	}
-	for _, cpaCode := range newCpaCodes {
-		_, err := c.cpaCodeStore.Insert(ctx, cpaCode)
+
+	if len(newCpaCodes) > 0 {
+		_, err := c.cpaCodeStore.BulkInsert(ctx, newCpaCodes)
 		if err != nil {
-			return fmt.Errorf("c.cpaCodeStore.Insert failed for CPA code '%s': %w", cpaCode.Value, err)
+			return fmt.Errorf("c.cpaCodeStore.BulkInsert failed: %w", err)
 		}
+		c.logger.Info("inserted new CPA codes", "count", len(newCpaCodes))
 	}
 
 	return nil

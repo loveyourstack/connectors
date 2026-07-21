@@ -76,7 +76,7 @@ func (s Store) Delete(ctx context.Context, id int64) error {
 
 func (s Store) Equal(a, b Model) bool {
 	return a.RateType == b.RateType &&
-		fmt.Sprintf("%.4f", a.Rate) == fmt.Sprintf("%.4f", b.Rate)
+		fmt.Sprintf("%.6f", a.Rate) == fmt.Sprintf("%.6f", b.Rate)
 }
 
 func (s Store) GetName() string {

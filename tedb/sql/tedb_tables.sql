@@ -54,7 +54,7 @@ CREATE TABLE tedb.vat_rate
   comment text NOT NULL,
   cpa_codes text[] NOT NULL, -- services
   created_at tracking_at,
-  member_state varchar(2) NOT NULL CHECK (member_state != ''),
+  member_state varchar(2) NOT NULL CHECK (LENGTH(member_state) = 2 AND member_state ~ '^[A-Z]+$'),
   rate_type tedb.vat_rate_type NOT NULL,
   rate numeric(9,6) NOT NULL CHECK (rate >= 0),
   situation_on date NOT NULL,

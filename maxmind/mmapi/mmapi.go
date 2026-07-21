@@ -58,15 +58,6 @@ func NewClient(conf Conf, db *pgxpool.Pool, logger *slog.Logger) (client Client)
 
 func (c Client) doRequest(ctx context.Context, method, url string, body io.Reader) (respBody []byte, respHeader http.Header, attempt, statusCode int, err error) {
 
-	// define request
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
-	if err != nil {
-		return nil, nil, 0, 0, fmt.Errorf("http.NewRequestWithContext failed: %w", err)
-	}
-
-	// add basic auth
-	req.SetBasicAuth(c.conf.AccountId, c.conf.LicenseKey)
-
 	// start attempts loop
 	maxAttempts := 3
 	defaultBackoff := 5 * time.Second
@@ -78,6 +69,15 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 		if attempt > maxAttempts {
 			return nil, nil, attempt, 0, fmt.Errorf("max attempts exceeded (%d)", maxAttempts)
 		}
+
+		// define request
+		req, err := http.NewRequestWithContext(ctx, method, url, body)
+		if err != nil {
+			return nil, nil, 0, 0, fmt.Errorf("http.NewRequestWithContext failed: %w", err)
+		}
+
+		// add basic auth
+		req.SetBasicAuth(c.conf.AccountId, c.conf.LicenseKey)
 
 		// do request
 		resp, err := c.httpClient.Do(req)
@@ -111,6 +111,7 @@ func (c Client) doRequest(ctx context.Context, method, url string, body io.Reade
 		// read body
 		respBody, err = io.ReadAll(resp.Body)
 		if err != nil {
+			resp.Body.Close()
 			return nil, nil, attempt, resp.StatusCode, fmt.Errorf("io.ReadAll failed: %w", err)
 		}
 
