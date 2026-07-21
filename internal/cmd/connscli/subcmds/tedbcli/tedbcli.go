@@ -12,6 +12,8 @@ func NewCmd(cliApp *cliapp.App) *cobra.Command {
 		Short: "TEDB connector commands",
 	}
 
+	cmd.AddCommand(ViewVatRatesCmd(cliApp))
+
 	cmd.AddCommand(tedbsynccli.NewCmd(cliApp))
 
 	return cmd

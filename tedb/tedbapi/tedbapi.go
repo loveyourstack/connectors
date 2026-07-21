@@ -13,6 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/loveyourstack/connectors/tedb/stores/tedbapicall"
 	"github.com/loveyourstack/connectors/tedb/stores/tedbvatcategory"
+	"github.com/loveyourstack/connectors/tedb/stores/tedbvatcncode"
+	"github.com/loveyourstack/connectors/tedb/stores/tedbvatcpacode"
 	"github.com/loveyourstack/lys/lystime"
 )
 
@@ -22,17 +24,21 @@ const (
 )
 
 type Client struct {
-	callStore  tedbapicall.Store
-	catStore   tedbvatcategory.Store
-	httpClient *http.Client
-	logger     *slog.Logger
+	callStore    tedbapicall.Store
+	catStore     tedbvatcategory.Store
+	cnCodeStore  tedbvatcncode.Store
+	cpaCodeStore tedbvatcpacode.Store
+	httpClient   *http.Client
+	logger       *slog.Logger
 }
 
 func NewClient(db *pgxpool.Pool, logger *slog.Logger) (client Client) {
 
 	return Client{
-		callStore: tedbapicall.Store{Db: db},
-		catStore:  tedbvatcategory.Store{Db: db},
+		callStore:    tedbapicall.Store{Db: db},
+		catStore:     tedbvatcategory.Store{Db: db},
+		cnCodeStore:  tedbvatcncode.Store{Db: db},
+		cpaCodeStore: tedbvatcpacode.Store{Db: db},
 		httpClient: &http.Client{
 			Timeout: time.Duration(timeoutSecs) * time.Second,
 		},

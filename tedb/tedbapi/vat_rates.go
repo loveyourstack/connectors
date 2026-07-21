@@ -6,11 +6,14 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/loveyourstack/connectors/tedb/stores/tedbapicall"
 	"github.com/loveyourstack/connectors/tedb/stores/tedbvatcategory"
+	"github.com/loveyourstack/connectors/tedb/stores/tedbvatcncode"
+	"github.com/loveyourstack/connectors/tedb/stores/tedbvatcpacode"
 	"github.com/loveyourstack/connectors/tedb/stores/tedbvatrate"
 	"github.com/loveyourstack/lys/lysset"
 	"github.com/loveyourstack/lys/lystype"
@@ -242,28 +245,22 @@ func (c Client) GetVatRates(ctx context.Context, countryISOs []string, startDate
 		return nil, fmt.Errorf("c.GetApiVatRates failed: %w", err)
 	}
 
-	// do a pass through items to get distinct categories
-	seen := lysset.New[string]()
-	cats := []tedbvatcategory.Input{}
-	for _, apiItem := range apiItems {
-		if apiItem.Category == nil {
-			continue
-		}
-		if seen.Contains(apiItem.Category.Identifier) {
-			continue
-		}
-
-		seen.Add(apiItem.Category.Identifier)
-		cats = append(cats, tedbvatcategory.Input{
-			Description: apiItem.Category.Description,
-			Identifier:  apiItem.Category.Identifier,
-		})
+	// do a pass through API items to get distinct categories and codes
+	cats, cnCodes, cpaCodes, err := c.getDistinctCategoriesAndCodes(apiItems)
+	if err != nil {
+		return nil, fmt.Errorf("c.getDistinctCategoriesAndCodes failed: %w", err)
 	}
 
 	// get categories map, inserting new ones as needed
 	catMap, err := c.getCategoriesMap(ctx, cats)
 	if err != nil {
 		return nil, fmt.Errorf("c.getCategoriesMap failed: %w", err)
+	}
+
+	// add new codes to db
+	err = c.addNewCodesToDb(ctx, cnCodes, cpaCodes)
+	if err != nil {
+		return nil, fmt.Errorf("c.addNewCodesToDb failed: %w", err)
 	}
 
 	for _, apiItem := range apiItems {
@@ -291,6 +288,7 @@ func (c Client) GetVatRatesMap(ctx context.Context, countryISOs []string, startD
 		// API sometimes returns items outside the requested date range. Filter them out so that API to DB sync comparison works correctly
 		situationOnT := time.Time(input.SituationOn)
 		if situationOnT.Before(startDate) || situationOnT.After(endDate) {
+			//c.logger.Debug("skipping API item outside requested date range", "situationOn", situationOnT, "startDate", startDate, "endDate", endDate)
 			continue
 		}
 
@@ -319,7 +317,7 @@ func (c Client) apiVatRateToItem(apiItem VatRateResult, catMap map[string]int64)
 	if apiItem.Rate.Value != nil {
 		rate = *apiItem.Rate.Value
 	}
-	situationOnT, err := time.Parse("2006-01-02-07:00", apiItem.SituationOn)
+	situationOnT, err := time.Parse("2006-01-02", apiItem.SituationOn[0:10]) // ignore timezone offset so that comparison with start/end date works correctly
 	if err != nil {
 		return item, fmt.Errorf("time.Parse failed for situationOn '%s': %w", apiItem.SituationOn, err)
 	}
@@ -350,6 +348,7 @@ func (c Client) apiVatRateToItem(apiItem VatRateResult, catMap map[string]int64)
 			}
 			item.CnCodes = append(item.CnCodes, cnCode.Value)
 		}
+		slices.Sort(item.CnCodes)
 	}
 	if apiItem.CPACodes != nil {
 		for _, cpaCode := range apiItem.CPACodes.Code {
@@ -358,6 +357,7 @@ func (c Client) apiVatRateToItem(apiItem VatRateResult, catMap map[string]int64)
 			}
 			item.CpaCodes = append(item.CpaCodes, cpaCode.Value)
 		}
+		slices.Sort(item.CpaCodes)
 	}
 
 	return item, nil
@@ -396,4 +396,102 @@ func (c Client) getCategoriesMap(ctx context.Context, inputs []tedbvatcategory.I
 
 	// return updated map
 	return catMap, nil
+}
+
+func (c Client) getDistinctCategoriesAndCodes(apiItems []VatRateResult) (cats []tedbvatcategory.Input, cnCodes []tedbvatcncode.Input, cpaCodes []tedbvatcpacode.Input, err error) {
+
+	catSeen := lysset.New[string]()
+	cnCodeSeen := lysset.New[string]()
+	cpaCodeSeen := lysset.New[string]()
+
+	for _, apiItem := range apiItems {
+
+		// categories
+		if apiItem.Category != nil {
+			if !catSeen.Contains(apiItem.Category.Identifier) {
+				catSeen.Add(apiItem.Category.Identifier)
+				cats = append(cats, tedbvatcategory.Input{
+					Description: apiItem.Category.Description,
+					Identifier:  apiItem.Category.Identifier,
+				})
+			}
+		}
+
+		// cn codes
+		if apiItem.CNCodes != nil {
+			for _, cnCode := range apiItem.CNCodes.Code {
+				if cnCode.Value == "" {
+					continue
+				}
+				if !cnCodeSeen.Contains(cnCode.Value) {
+					cnCodeSeen.Add(cnCode.Value)
+					cnCodes = append(cnCodes, tedbvatcncode.Input{
+						Description: cnCode.Description,
+						Value:       cnCode.Value,
+					})
+				}
+			}
+		}
+
+		// cpa codes
+		if apiItem.CPACodes != nil {
+			for _, cpaCode := range apiItem.CPACodes.Code {
+				if cpaCode.Value == "" {
+					continue
+				}
+				if !cpaCodeSeen.Contains(cpaCode.Value) {
+					cpaCodeSeen.Add(cpaCode.Value)
+					cpaCodes = append(cpaCodes, tedbvatcpacode.Input{
+						Description: cpaCode.Description,
+						Value:       cpaCode.Value,
+					})
+				}
+			}
+		}
+	}
+
+	return cats, cnCodes, cpaCodes, nil
+}
+
+func (c Client) addNewCodesToDb(ctx context.Context, cnCodes []tedbvatcncode.Input, cpaCodes []tedbvatcpacode.Input) (err error) {
+
+	// get existing codes from DB
+	existingCnCodes, err := c.cnCodeStore.SelectValueSet(ctx)
+	if err != nil {
+		return fmt.Errorf("c.cnCodeStore.SelectValueSet failed: %w", err)
+	}
+	existingCpaCodes, err := c.cpaCodeStore.SelectValueSet(ctx)
+	if err != nil {
+		return fmt.Errorf("c.cpaCodeStore.SelectValueSet failed: %w", err)
+	}
+
+	// filter out codes that already exist in DB
+	newCnCodes := []tedbvatcncode.Input{}
+	for _, cnCode := range cnCodes {
+		if !existingCnCodes.Contains(cnCode.Value) {
+			newCnCodes = append(newCnCodes, cnCode)
+		}
+	}
+	newCpaCodes := []tedbvatcpacode.Input{}
+	for _, cpaCode := range cpaCodes {
+		if !existingCpaCodes.Contains(cpaCode.Value) {
+			newCpaCodes = append(newCpaCodes, cpaCode)
+		}
+	}
+
+	// add new codes to db
+	for _, cnCode := range newCnCodes {
+		_, err := c.cnCodeStore.Insert(ctx, cnCode)
+		if err != nil {
+			return fmt.Errorf("c.cnCodeStore.Insert failed for CN code '%s': %w", cnCode.Value, err)
+		}
+	}
+	for _, cpaCode := range newCpaCodes {
+		_, err := c.cpaCodeStore.Insert(ctx, cpaCode)
+		if err != nil {
+			return fmt.Errorf("c.cpaCodeStore.Insert failed for CPA code '%s': %w", cpaCode.Value, err)
+		}
+	}
+
+	return nil
 }
