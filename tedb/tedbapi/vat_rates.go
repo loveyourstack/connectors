@@ -134,7 +134,7 @@ func (c Client) GetApiVatRates(ctx context.Context, countryISOs []string, startD
 	callInput := tedbapicall.Input{
 		Attempt:    0, // set from doRequest response
 		DurationMs: 0, // set in defer
-		Endpoint:   baseUrl,
+		Endpoint:   fmt.Sprintf("%s (%s - %s)", baseUrl, startDate.Format(lystype.DateFormat), endDate.Format(lystype.DateFormat)),
 		Method:     http.MethodPost,
 		Page:       1,
 		Result:     "", // set below depending on success or error
@@ -399,7 +399,7 @@ func (c Client) getCategoriesMap(ctx context.Context, inputs []tedbvatcategory.I
 		if err != nil {
 			return nil, fmt.Errorf("c.catStore.Insert failed for category: %s: %w", newCat.Identifier, err)
 		}
-		c.logger.Info("inserted new category", "identifier", newCat.Identifier, "id", newId)
+		c.logger.Info("inserted category", "identifier", newCat.Identifier, "id", newId)
 		catMap[newCat.Identifier] = newId
 	}
 
@@ -494,7 +494,7 @@ func (c Client) addNewCodesToDb(ctx context.Context, cnCodes []tedbvatcncode.Inp
 		if err != nil {
 			return fmt.Errorf("c.cnCodeStore.BulkInsert failed: %w", err)
 		}
-		c.logger.Info("inserted new CN codes", "count", len(newCnCodes))
+		c.logger.Info("inserted CN codes", "count", len(newCnCodes))
 	}
 
 	if len(newCpaCodes) > 0 {
@@ -502,7 +502,7 @@ func (c Client) addNewCodesToDb(ctx context.Context, cnCodes []tedbvatcncode.Inp
 		if err != nil {
 			return fmt.Errorf("c.cpaCodeStore.BulkInsert failed: %w", err)
 		}
-		c.logger.Info("inserted new CPA codes", "count", len(newCpaCodes))
+		c.logger.Info("inserted CPA codes", "count", len(newCpaCodes))
 	}
 
 	return nil
