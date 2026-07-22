@@ -23,6 +23,8 @@ const (
 	timeoutSecs int    = 20
 )
 
+var ErrNoRatesFound = errors.New("no rates found")
+
 type Client struct {
 	callStore    tedbapicall.Store
 	catStore     tedbvatcategory.Store

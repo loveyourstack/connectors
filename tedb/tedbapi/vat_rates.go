@@ -227,9 +227,8 @@ func (c Client) GetApiVatRates(ctx context.Context, countryISOs []string, startD
 
 	// check for missing results
 	if len(soapResp.Body.Response.VatRateResults) == 0 {
-		errMsg := "SOAP response did not contain any VatRateResults"
-		callInput.Result = errMsg
-		return nil, fmt.Errorf("%s", errMsg)
+		callInput.Result = ErrNoRatesFound.Error()
+		return nil, ErrNoRatesFound
 	}
 
 	// success

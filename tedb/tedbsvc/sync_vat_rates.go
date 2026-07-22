@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/loveyourstack/connectors/tedb/stores/tedbvatrate"
+	"github.com/loveyourstack/connectors/tedb/tedbapi"
 	"github.com/loveyourstack/lys/lystype"
 )
 
@@ -62,7 +63,8 @@ func (svc Service) SyncVatRates(ctx context.Context, db *pgxpool.Pool, startDate
 		return fmt.Errorf("svc.Client.GetVatRatesMap failed: %w", err)
 	}
 	if len(apiItemsMap) == 0 {
-		return fmt.Errorf("API returned no items, refusing to sync")
+		// API returning no rates is normal for short date intervals
+		return tedbapi.ErrNoRatesFound
 	}
 
 	itemStore := tedbvatrate.Store{Db: db}
