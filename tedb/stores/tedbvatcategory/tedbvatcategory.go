@@ -2,7 +2,6 @@ package tedbvatcategory
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -67,16 +66,7 @@ func (s Store) Select(ctx context.Context, params lyspg.SelectParams) (items []M
 }
 
 func (s Store) SelectIdentifierIdMap(ctx context.Context) (idenIdMap map[string]int64, err error) {
-	items, _, err := s.Select(ctx, lyspg.SelectParams{})
-	if err != nil {
-		return nil, fmt.Errorf("s.Select failed: %w", err)
-	}
-
-	idenIdMap = make(map[string]int64)
-	for _, dbItem := range items {
-		idenIdMap[dbItem.Identifier] = dbItem.Id
-	}
-	return idenIdMap, nil
+	return lyspg.ValueMap[string, int64](ctx, s.Db, schemaName, tableName, "identifier", "id", nil)
 }
 
 func (s Store) SelectById(ctx context.Context, id int64) (item Model, err error) {

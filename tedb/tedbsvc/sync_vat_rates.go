@@ -64,6 +64,14 @@ func (svc Service) SyncVatRates(ctx context.Context, db *pgxpool.Pool, startDate
 	}
 	if len(apiItemsMap) == 0 {
 		// API returning no rates is normal for short date intervals
+
+		// if a sync store is provided, upsert the last sync time
+		if svc.SyncStore != nil {
+			err = svc.SyncStore.Upsert(ctx, VatRatesSync)
+			if err != nil {
+				return fmt.Errorf("svc.SyncStore.Upsert failed: %w", err)
+			}
+		}
 		return tedbapi.ErrNoRatesFound
 	}
 
