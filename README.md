@@ -21,3 +21,8 @@ Only available for PostgreSQL.
 `Requires free registration`
 
 * IP locations (GeoLite2-City with English location names)
+
+### Taxes in Europe database (TEDB)
+`Public`
+
+* VAT rates
