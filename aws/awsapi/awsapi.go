@@ -10,6 +10,7 @@ import (
 	awsCfg "github.com/aws/aws-sdk-go-v2/config"
 	awsCreds "github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/loveyourstack/connectors/aws/stores/awsapicall"
 )
@@ -25,6 +26,7 @@ type Client struct {
 	conf      Conf
 
 	ec2Client *ec2.Client
+	s3Client  *s3.Client
 
 	logger *slog.Logger
 }
@@ -50,13 +52,14 @@ func NewClient(conf Conf, db *pgxpool.Pool, logger *slog.Logger) *Client {
 		callStore: awsapicall.Store{Db: db},
 
 		ec2Client: nil, // lazily initialized in makeEc2Client
+		s3Client:  nil, // lazily initialized in makeS3Client
 
 		logger: logger.With("api", apiShortname),
 	}
 }
 
-// connect return AWS config using the provided credentials and region.
-func (c *Client) connect(ctx context.Context) (cfg aws.Config, err error) {
+// getConfig return AWS config using the provided credentials and region.
+func (c *Client) getConfig(ctx context.Context) (cfg aws.Config, err error) {
 
 	staticProvider := awsCreds.NewStaticCredentialsProvider(c.conf.AccessKeyId, c.conf.SecretAccessKey, "")
 	cfg, err = awsCfg.LoadDefaultConfig(ctx, awsCfg.WithRegion(c.conf.Region), awsCfg.WithCredentialsProvider(staticProvider))
@@ -74,11 +77,27 @@ func (c *Client) makeEc2Client(ctx context.Context) (err error) {
 		return nil
 	}
 
-	cfg, err := c.connect(ctx)
+	cfg, err := c.getConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("c.connect failed: %w", err)
+		return fmt.Errorf("c.getConfig failed: %w", err)
 	}
 
 	c.ec2Client = ec2.NewFromConfig(cfg)
+	return nil
+}
+
+// makeS3Client lazily initializes the S3 client and reuses it for subsequent calls
+func (c *Client) makeS3Client(ctx context.Context) (err error) {
+
+	if c.s3Client != nil {
+		return nil
+	}
+
+	cfg, err := c.getConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("c.getConfig failed: %w", err)
+	}
+
+	c.s3Client = s3.NewFromConfig(cfg)
 	return nil
 }
