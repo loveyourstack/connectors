@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.107.3
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/loveyourstack/lys v0.3.55
+	github.com/loveyourstack/lys v0.3.57
 	github.com/spf13/cobra v1.10.2
 )
 
