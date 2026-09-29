@@ -10,6 +10,7 @@ Only available for PostgreSQL.
 `Requires account`
 
 * EC2 security group rules
+* S3 objects
 
 ### European Central Bank (ECB)
 `Public`
