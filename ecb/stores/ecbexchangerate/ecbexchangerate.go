@@ -25,10 +25,10 @@ const (
 
 type Input struct {
 	Day            lystype.Date `db:"day" json:"day,omitzero" validate:"required"`
-	Frequency      string       `db:"frequency" json:"frequency,omitempty" validate:"required,len=1"`
-	FromCurrencyFk int64        `db:"from_currency_fk" json:"from_currency_fk,omitempty" validate:"required"`
-	Rate           float64      `db:"rate" json:"rate,omitempty" validate:"required"`
-	ToCurrencyFk   int64        `db:"to_currency_fk" json:"to_currency_fk,omitempty" validate:"required"`
+	Frequency      string       `db:"frequency" json:"frequency,omitzero" validate:"required,len=1"`
+	FromCurrencyFk int64        `db:"from_currency_fk" json:"from_currency_fk,omitzero" validate:"required"`
+	Rate           float64      `db:"rate" json:"rate,omitzero" validate:"required"`
+	ToCurrencyFk   int64        `db:"to_currency_fk" json:"to_currency_fk,omitzero" validate:"required"`
 }
 
 type Model struct {

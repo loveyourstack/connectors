@@ -21,8 +21,8 @@ const (
 )
 
 type Input struct {
-	Code string `db:"code" json:"code,omitempty" validate:"required,min=2,max=3"`
-	Name string `db:"name" json:"name,omitempty" validate:"required,max=500"`
+	Code string `db:"code" json:"code,omitzero" validate:"required,min=2,max=3"`
+	Name string `db:"name" json:"name,omitzero" validate:"required,max=500"`
 }
 
 type Model struct {

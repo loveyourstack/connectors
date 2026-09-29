@@ -22,10 +22,10 @@ const (
 )
 
 type Input struct {
-	CityName       string `db:"city_name" json:"city_name,omitempty"`
-	CountryIsoCode string `db:"country_iso_code" json:"country_iso_code,omitempty"`
-	CountryName    string `db:"country_name" json:"country_name,omitempty"`
-	GeonameId      int    `db:"geoname_id" json:"geoname_id,omitempty"`
+	CityName       string `db:"city_name" json:"city_name,omitzero"`
+	CountryIsoCode string `db:"country_iso_code" json:"country_iso_code,omitzero"`
+	CountryName    string `db:"country_name" json:"country_name,omitzero"`
+	GeonameId      int    `db:"geoname_id" json:"geoname_id,omitzero"`
 }
 
 type Model struct {

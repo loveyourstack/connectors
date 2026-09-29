@@ -20,17 +20,17 @@ const (
 )
 
 type Input struct {
-	Attempt    int    `db:"attempt" json:"attempt,omitempty" validate:"required,min=1"`
+	Attempt    int    `db:"attempt" json:"attempt,omitzero" validate:"required,min=1"`
 	DurationMs int64  `db:"duration_ms" json:"duration_ms" validate:"required,min=0"`
-	Endpoint   string `db:"endpoint" json:"endpoint,omitempty" validate:"required"`
-	Method     string `db:"method" json:"method,omitempty" validate:"required,max=64"`
-	Page       int    `db:"page" json:"page,omitempty" validate:"required,min=1"`
-	Result     string `db:"result" json:"result,omitempty"`
-	StatusCode int    `db:"status_code" json:"status_code,omitempty" validate:"required,min=0"`
+	Endpoint   string `db:"endpoint" json:"endpoint,omitzero" validate:"required"`
+	Method     string `db:"method" json:"method,omitzero" validate:"required,max=64"`
+	Page       int    `db:"page" json:"page,omitzero" validate:"required,min=1"`
+	Result     string `db:"result" json:"result,omitzero"`
+	StatusCode int    `db:"status_code" json:"status_code,omitzero" validate:"required,min=0"`
 }
 
 type Model struct {
-	Id            int64            `db:"id" json:"id,omitempty"`
+	Id            int64            `db:"id" json:"id,omitzero"`
 	CreatedAt     lystype.Datetime `db:"created_at" json:"created_at,omitzero"`
 	CreatedAtDate lystype.Date     `db:"created_at_date" json:"created_at_date,omitzero"`
 	Input

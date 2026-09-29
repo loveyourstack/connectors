@@ -23,20 +23,20 @@ const (
 )
 
 type Input struct {
-	CategoryFk  int64        `db:"category_fk" json:"category_fk,omitempty"`
+	CategoryFk  int64        `db:"category_fk" json:"category_fk,omitzero"`
 	CnCodes     []string     `db:"cn_codes" json:"cn_codes,omitempty"`
-	Comment     string       `db:"comment" json:"comment,omitempty"`
+	Comment     string       `db:"comment" json:"comment,omitzero"`
 	CpaCodes    []string     `db:"cpa_codes" json:"cpa_codes,omitempty"`
-	MemberState string       `db:"member_state" json:"member_state,omitempty" validate:"required,len=2"`
-	RateType    string       `db:"rate_type" json:"rate_type,omitempty" validate:"required,max=64"`
-	Rate        float64      `db:"rate" json:"rate,omitempty" validate:"required,gte=0"`
+	MemberState string       `db:"member_state" json:"member_state,omitzero" validate:"required,len=2"`
+	RateType    string       `db:"rate_type" json:"rate_type,omitzero" validate:"required,max=64"`
+	Rate        float64      `db:"rate" json:"rate,omitzero" validate:"required,gte=0"`
 	SituationOn lystype.Date `db:"situation_on" json:"situation_on,omitzero" validate:"required"`
-	Type        string       `db:"type" json:"type,omitempty" validate:"required,max=64"`
+	Type        string       `db:"type" json:"type,omitzero" validate:"required,max=64"`
 }
 
 type Model struct {
 	Id                 int64            `db:"id" json:"id"`
-	CategoryIdentifier string           `db:"category_identifier" json:"category_identifier,omitempty"`
+	CategoryIdentifier string           `db:"category_identifier" json:"category_identifier,omitzero"`
 	CreatedAt          lystype.Datetime `db:"created_at" json:"created_at,omitzero"`
 	UpdatedAt          lystype.Datetime `db:"updated_at" json:"updated_at,omitzero"` // assigned by trigger (assumes use of lyspgmon.CheckDb)
 	Input

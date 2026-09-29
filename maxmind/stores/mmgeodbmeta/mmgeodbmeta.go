@@ -23,12 +23,12 @@ const (
 )
 
 type Input struct {
-	GeoDB       string           `db:"geo_db" json:"geo_db,omitempty" validate:"required"`
+	GeoDB       string           `db:"geo_db" json:"geo_db,omitzero" validate:"required"`
 	LastWriteAt lystype.Datetime `db:"last_write_at" json:"last_write_at,omitzero" validate:"required"`
 }
 
 type Model struct {
-	Id        int64            `db:"id" json:"id,omitempty"`
+	Id        int64            `db:"id" json:"id,omitzero"`
 	CreatedAt lystype.Datetime `db:"created_at" json:"created_at,omitzero"`
 	Input
 }

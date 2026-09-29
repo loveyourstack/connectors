@@ -22,8 +22,8 @@ const (
 )
 
 type Input struct {
-	Description string `db:"description" json:"description,omitempty" validate:"required"`
-	Value       string `db:"value" json:"value,omitempty" validate:"required,max=64"`
+	Description string `db:"description" json:"description,omitzero" validate:"required"`
+	Value       string `db:"value" json:"value,omitzero" validate:"required,max=64"`
 }
 
 type Model struct {

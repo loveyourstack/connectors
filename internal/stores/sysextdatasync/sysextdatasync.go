@@ -28,11 +28,11 @@ const (
 
 type Input struct {
 	LastSyncAt lystype.Datetime   `db:"last_sync_at" json:"last_sync_at,omitzero" validate:"required"`
-	SyncKey    lysextdata.SyncKey `db:"sync_key" json:"sync_key,omitempty" validate:"required,max=256"`
+	SyncKey    lysextdata.SyncKey `db:"sync_key" json:"sync_key,omitzero" validate:"required,max=256"`
 }
 
 type Model struct {
-	Id        int64            `db:"id" json:"id,omitempty"`
+	Id        int64            `db:"id" json:"id,omitzero"`
 	CreatedAt lystype.Datetime `db:"created_at" json:"created_at,omitzero"`
 	Input
 }

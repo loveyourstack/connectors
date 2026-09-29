@@ -22,8 +22,8 @@ const (
 )
 
 type Input struct {
-	SecurityGroupRuleId string `db:"security_group_rule_id" json:"security_group_rule_id,omitempty" validate:"required"`
-	UserShortname       string `db:"user_shortname" json:"user_shortname,omitempty" validate:"required"`
+	SecurityGroupRuleId string `db:"security_group_rule_id" json:"security_group_rule_id,omitzero" validate:"required"`
+	UserShortname       string `db:"user_shortname" json:"user_shortname,omitzero" validate:"required"`
 }
 
 type Model struct {

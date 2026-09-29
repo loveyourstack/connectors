@@ -75,7 +75,7 @@ type Category struct {
 type retrieveVatRatesReqMsg struct {
 	XMLName      xml.Name            `xml:"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService retrieveVatRatesReqMsg"`
 	MemberStates requestMemberStates `xml:"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService:types memberStates"`
-	From         string              `xml:"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService:types from,omitempty"`
+	From         string              `xml:"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService:types from,omitzero"`
 	To           string              `xml:"urn:ec.europa.eu:taxud:tedb:services:v1:IVatRetrievalService:types to"`
 }
 

@@ -23,7 +23,7 @@ const (
 )
 
 type Input struct {
-	GeonameId int          `db:"geoname_id" json:"geoname_id,omitempty"`
+	GeonameId int          `db:"geoname_id" json:"geoname_id,omitzero"`
 	Network   netip.Prefix `db:"network" json:"network,omitzero"` // natural key
 }
 
