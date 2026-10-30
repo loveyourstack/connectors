@@ -18,8 +18,6 @@ func VatRatesCmd(cliApp *cliapp.App) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			ctx := cmd.Context()
 
-			defer cliApp.Db.Close()
-
 			startDate, err := time.Parse("2006-01-02", args[0])
 			if err != nil {
 				return fmt.Errorf("time.Parse (start) failed: %w", err)

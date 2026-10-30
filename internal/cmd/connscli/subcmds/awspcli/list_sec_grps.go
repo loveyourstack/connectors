@@ -15,8 +15,6 @@ func ListSecGrpsCmd(cliApp *cliapp.App) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			ctx := cmd.Context()
 
-			defer cliApp.Db.Close()
-
 			secGrps, err := cliApp.AwsClient.GetApiEc2SecGroups(ctx)
 			if err != nil {
 				return fmt.Errorf("cliApp.AwsClient.GetApiEc2SecGroups failed: %w", err)

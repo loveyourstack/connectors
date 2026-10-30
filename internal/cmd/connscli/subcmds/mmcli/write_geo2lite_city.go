@@ -16,8 +16,6 @@ func WriteGeo2LiteCityCmd(cliApp *cliapp.App) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			ctx := cmd.Context()
 
-			defer cliApp.Db.Close()
-
 			// parse getNewZip argument
 			getNewZip, err := strconv.ParseBool(args[0])
 			if err != nil {

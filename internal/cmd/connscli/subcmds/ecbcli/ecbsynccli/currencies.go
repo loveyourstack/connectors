@@ -16,8 +16,6 @@ func CurrenciesCmd(cliApp *cliapp.App) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			ctx := cmd.Context()
 
-			defer cliApp.Db.Close()
-
 			err = cliApp.EcbSvc.SyncCurrencies(ctx, cliApp.Db)
 			if err != nil {
 				return fmt.Errorf("ecbsvc.SyncCurrencies failed: %w", err)

@@ -2,8 +2,7 @@ package rootcli
 
 import (
 	"context"
-	"errors"
-	"log"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -24,7 +23,6 @@ import (
 	"github.com/loveyourstack/connectors/maxmind/mmsvc"
 	"github.com/loveyourstack/connectors/tedb/tedbapi"
 	"github.com/loveyourstack/connectors/tedb/tedbsvc"
-	"github.com/loveyourstack/lys/lyserr"
 	"github.com/loveyourstack/lys/lyspgdb"
 	"github.com/spf13/cobra"
 )
@@ -35,8 +33,7 @@ var rootCmd = &cobra.Command{
 	Version:       version,
 	Short:         "connscli - CLI tool for Connectors",
 	Long:          `connscli is a CLI tool for running Connectors admin tasks`,
-	SilenceErrors: true, // subcommand errors are returned upwards via RunE and handled in Execute() below
-	SilenceUsage:  true,
+	SilenceErrors: true, // subcommand errors are returned upwards via RunE to Run() below, then to main()
 	// no Run function: a subcommand is always needed
 }
 
@@ -49,7 +46,7 @@ func addSubCommands() {
 	rootCmd.AddCommand(tedbcli.NewCmd(cliApp))
 }
 
-func Execute() {
+func Run() error {
 
 	// set up signal handling for graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -61,7 +58,7 @@ func Execute() {
 	conf := myapp.Config{}
 	err := conf.LoadFromFile("/usr/local/etc/conns_config.toml")
 	if err != nil {
-		log.Fatalf("initialization: conns_config.toml not found: %s", err.Error())
+		return fmt.Errorf("conf.LoadFromFile failed: %w", err)
 	}
 
 	// create non-specific app
@@ -75,19 +72,19 @@ func Execute() {
 	// connect to db and assign pool to cliApp
 	cliApp.Db, err = lyspgdb.GetPool(ctx, conf.Db, conf.DbOwnerUser, conf.General.AppName+" Cli")
 	if err != nil {
-		log.Fatalf("initialization: failed to create db connection pool: %s", err.Error())
+		return fmt.Errorf("lyspgdb.GetPool failed: %w", err)
 	}
 	defer cliApp.Db.Close()
 
 	// attach API clients
 	cliApp.AwsClient, err = awsapi.NewClient(conf.Aws, cliApp.Db, cliApp.Logger)
 	if err != nil {
-		log.Fatalf("initialization: failed to create AWS client: %s", err.Error())
+		return fmt.Errorf("awsapi.NewClient failed: %w", err)
 	}
 	cliApp.EcbClient = ecbapi.NewClient(cliApp.Db, cliApp.Logger)
 	cliApp.MaxMindClient, err = mmapi.NewClient(cliApp.Config.MaxMind, cliApp.Db, cliApp.Logger)
 	if err != nil {
-		log.Fatalf("initialization: failed to create MaxMind client: %s", err.Error())
+		return fmt.Errorf("mmapi.NewClient failed: %w", err)
 	}
 	cliApp.TedbClient = tedbapi.NewClient(cliApp.Db, cliApp.Logger)
 
@@ -95,24 +92,18 @@ func Execute() {
 	syncStore := sysextdatasync.Store{Db: cliApp.Db}
 	cliApp.AwsSvc, err = awssvc.NewService(cliApp.Db, cliApp.AwsClient, cliApp.Logger)
 	if err != nil {
-		log.Fatalf("initialization: failed to create AWS service: %s", err.Error())
+		return fmt.Errorf("awssvc.NewService failed: %w", err)
 	}
 	cliApp.EcbSvc = ecbsvc.NewServiceWithSyncStore(cliApp.EcbClient, cliApp.Logger, syncStore)
 	cliApp.MaxMindSvc, err = mmsvc.NewServiceWithSyncStore(cliApp.MaxMindClient, cliApp.Config.General.DownloadsPath, cliApp.Logger, syncStore)
 	if err != nil {
-		log.Fatalf("initialization: failed to create MaxMind service: %s", err.Error())
+		return fmt.Errorf("mmsvc.NewServiceWithSyncStore failed: %w", err)
 	}
 	cliApp.TedbSvc = tedbsvc.NewServiceWithSyncStore(cliApp.TedbClient, cliApp.Db, cliApp.Logger, syncStore)
-
-	// note that defer db Close is also needed in subcommands or else context cancelation doesn't propagate to db
 
 	// subcommands
 	addSubCommands()
 
-	if err := rootCmd.Execute(); err != nil {
-		if userErr, ok := errors.AsType[lyserr.User](err); ok {
-			log.Fatal(userErr)
-		}
-		log.Fatal(err.Error())
-	}
+	// execute the root command, which runs the appropriate subcommand based on user input
+	return rootCmd.Execute()
 }

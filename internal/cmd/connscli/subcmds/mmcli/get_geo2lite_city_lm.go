@@ -20,8 +20,6 @@ func GetGeo2LiteCityLmCmd(cliApp *cliapp.App) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			ctx := cmd.Context()
 
-			defer cliApp.Db.Close()
-
 			// try to get last write time from db
 			lastWriteAt := time.Time{}
 			metaStore := mmgeodbmeta.Store{Db: cliApp.Db}
