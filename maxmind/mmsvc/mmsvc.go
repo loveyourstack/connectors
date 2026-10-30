@@ -1,7 +1,7 @@
 package mmsvc
 
 import (
-	"log"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -23,16 +23,16 @@ type Service struct {
 	SyncStore lysextdata.ISyncStore
 }
 
-func NewService(client mmapi.Client, downloadsPath string, logger *slog.Logger) (svc Service) {
+func NewService(client mmapi.Client, downloadsPath string, logger *slog.Logger) (svc Service, err error) {
 
 	if downloadsPath == "" {
-		log.Fatal("maxmind svc: downloadsPath is required")
+		return Service{}, fmt.Errorf("maxmind svc: downloadsPath is required")
 	}
-	_, err := os.Stat(downloadsPath)
+	_, err = os.Stat(downloadsPath)
 	if os.IsNotExist(err) {
-		log.Fatalf("maxmind svc: downloadsPath does not exist: %s", downloadsPath)
+		return Service{}, fmt.Errorf("maxmind svc: downloadsPath does not exist: %s", downloadsPath)
 	} else if err != nil {
-		log.Fatalf("maxmind svc: error checking downloadsPath: %s", err.Error())
+		return Service{}, fmt.Errorf("maxmind svc: error checking downloadsPath: %s", err.Error())
 	}
 
 	svcShortname := "maxmind"
@@ -41,11 +41,14 @@ func NewService(client mmapi.Client, downloadsPath string, logger *slog.Logger) 
 		Client:        client,
 		DownloadsPath: downloadsPath,
 		Logger:        logger.With("svc", svcShortname),
-	}
+	}, nil
 }
 
-func NewServiceWithSyncStore(client mmapi.Client, downloadsPath string, logger *slog.Logger, syncStore lysextdata.ISyncStore) (svc Service) {
-	svc = NewService(client, downloadsPath, logger)
+func NewServiceWithSyncStore(client mmapi.Client, downloadsPath string, logger *slog.Logger, syncStore lysextdata.ISyncStore) (svc Service, err error) {
+	svc, err = NewService(client, downloadsPath, logger)
+	if err != nil {
+		return Service{}, err
+	}
 	svc.SyncStore = syncStore
-	return svc
+	return svc, nil
 }

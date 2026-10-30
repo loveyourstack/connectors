@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -35,13 +34,13 @@ type Client struct {
 	logger     *slog.Logger
 }
 
-func NewClient(conf Conf, db *pgxpool.Pool, logger *slog.Logger) (client Client) {
+func NewClient(conf Conf, db *pgxpool.Pool, logger *slog.Logger) (client Client, err error) {
 
 	if conf.AccountId == "" {
-		log.Fatalf("maxmind client: conf.AccountId is required")
+		return Client{}, fmt.Errorf("maxmind client: conf.AccountId is required")
 	}
 	if conf.LicenseKey == "" {
-		log.Fatalf("maxmind client: conf.LicenseKey is required")
+		return Client{}, fmt.Errorf("maxmind client: conf.LicenseKey is required")
 	}
 
 	apiShortname := "maxmind"
@@ -53,7 +52,7 @@ func NewClient(conf Conf, db *pgxpool.Pool, logger *slog.Logger) (client Client)
 			Timeout: time.Duration(timeoutSecs) * time.Second,
 		},
 		logger: logger.With("api", apiShortname),
-	}
+	}, nil
 }
 
 func (c Client) doRequest(ctx context.Context, method, url string, body io.Reader) (respBody []byte, respHeader http.Header, attempt, statusCode int, err error) {

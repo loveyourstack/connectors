@@ -1,7 +1,7 @@
 package awssvc
 
 import (
-	"log"
+	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,10 +18,10 @@ type Service struct {
 }
 
 // NewService creates a new AWS service.
-func NewService(db *pgxpool.Pool, client *awsapi.Client, logger *slog.Logger) (svc Service) {
+func NewService(db *pgxpool.Pool, client *awsapi.Client, logger *slog.Logger) (svc Service, err error) {
 
 	if client == nil {
-		log.Fatal("awssvc: client is required")
+		return Service{}, fmt.Errorf("awssvc: client is required")
 	}
 
 	svcShortname := "aws"
@@ -32,5 +32,5 @@ func NewService(db *pgxpool.Pool, client *awsapi.Client, logger *slog.Logger) (s
 		userSgRuleStore: awsusersgrule.Store{Db: db},
 
 		logger: logger.With("svc", svcShortname),
-	}
+	}, nil
 }

@@ -3,7 +3,6 @@ package awsapi
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -32,16 +31,16 @@ type Client struct {
 }
 
 // NewClient creates a new AWS API client.
-func NewClient(conf Conf, db *pgxpool.Pool, logger *slog.Logger) *Client {
+func NewClient(conf Conf, db *pgxpool.Pool, logger *slog.Logger) (*Client, error) {
 
 	if conf.AccessKeyId == "" {
-		log.Fatal("awsapi client: conf.AccessKeyId is required")
+		return nil, fmt.Errorf("awsapi client: conf.AccessKeyId is required")
 	}
 	if conf.Region == "" {
-		log.Fatal("awsapi client: conf.Region is required")
+		return nil, fmt.Errorf("awsapi client: conf.Region is required")
 	}
 	if conf.SecretAccessKey == "" {
-		log.Fatal("awsapi client: conf.SecretAccessKey is required")
+		return nil, fmt.Errorf("awsapi client: conf.SecretAccessKey is required")
 	}
 
 	apiShortname := "aws"
@@ -55,7 +54,7 @@ func NewClient(conf Conf, db *pgxpool.Pool, logger *slog.Logger) *Client {
 		s3Client:  nil, // lazily initialized in makeS3Client
 
 		logger: logger.With("api", apiShortname),
-	}
+	}, nil
 }
 
 // getConfig return AWS config using the provided credentials and region.
